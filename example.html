@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>City Builder Game - Integration Example</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .info-panel {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .info-panel h1 {
+            margin-top: 0;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #game-container {
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="info-panel">
+            <h1>City Builder Game - Integration Example</h1>
+            <p>This example demonstrates how to start the game with custom player information and authentication.</p>
+            
+            <div class="form-group">
+                <label for="playerId">Player ID:</label>
+                <input type="text" id="playerId" value="player-456">
+            </div>
+            
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" value="TestPlayer">
+            </div>
+            
+            <div class="form-group">
+                <label for="authCookie">Auth Cookie:</label>
+                <input type="text" id="authCookie" value="sample-auth-token-abc123">
+            </div>
+            
+            <div class="form-group">
+                <label for="backendUrl">Backend URL (optional):</label>
+                <input type="text" id="backendUrl" value="/api" placeholder="/api">
+            </div>
+            
+            <button onclick="startTheGame()">Start Game</button>
+        </div>
+        
+        <div id="game-container"></div>
+    </div>
+
+    <!-- Include the game bundle -->
+    <script src="../dist/bundle.js"></script>
+    
+    <script>
+        function startTheGame() {
+            // Clear any existing game
+            const container = document.getElementById('game-container');
+            container.innerHTML = '';
+            
+            // Get values from form
+            const playerId = document.getElementById('playerId').value;
+            const username = document.getElementById('username').value;
+            const authCookie = document.getElementById('authCookie').value;
+            const backendUrl = document.getElementById('backendUrl').value || '/api';
+            
+            // Start the game with configuration
+            window.startCityBuilderGame({
+                player: {
+                    id: playerId,
+                    username: username
+                },
+                authCookie: authCookie,
+                backendUrl: backendUrl
+            });
+            
+            console.log('Game started with configuration:', {
+                player: { id: playerId, username },
+                authCookie,
+                backendUrl
+            });
+        }
+        
+        // Auto-start on page load
+        window.addEventListener('load', () => {
+            console.log('Page loaded. Click "Start Game" to begin.');
+        });
+    </script>
+</body>
+</html>
