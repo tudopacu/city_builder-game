@@ -2,13 +2,14 @@ import Phaser from 'phaser';
 import { GameScene } from './scenes/GameScene';
 import { GameConfig } from './types';
 import { ApiService } from './services/ApiService';
+import {Player} from "./models/Player";
 
 /**
  * Initialize and start the city builder game
  * @param config Game configuration including player info and auth cookie
  */
 export function startGame(config: GameConfig): Phaser.Game {
-  const { player, authCookie, backendUrl = '/api' } = config;
+  const { player, authCookie, backendUrl = 'http://localhost:5000/game' } = config;
 
   console.log('Starting City Builder Game...');
   console.log(`Player: ${player.username} (ID: ${player.id})`);
@@ -48,7 +49,7 @@ export function startGame(config: GameConfig): Phaser.Game {
 }
 
 // Export for use in other modules
-export { GameConfig, Player } from './types';
+export { GameConfig } from './types';
 export { ApiService } from './services/ApiService';
 
 // Example usage - this can be called from external code
@@ -59,21 +60,19 @@ declare global {
   }
 }
 
-window.startCityBuilderGame = startGame;
+(async () => {
+  const token = new URLSearchParams(window.location.search).get('token');
+  const player: Player = await Player.getPlayer();
 
-// Auto-start with example configuration if in development
-if (process.env.NODE_ENV !== 'production') {
-  // Example: automatically start with demo player
-  // In production, this should be called from parent application
-  const demoConfig: GameConfig = {
-    player: {
-      id: 'demo-player-123',
-      username: 'DemoPlayer',
-    },
-    authCookie: 'demo-auth-cookie-token',
-    backendUrl: '/api', // This will use default map data since backend is not available
-  };
+  window.startCityBuilderGame = startGame;
 
-  console.log('Development mode: Auto-starting with demo configuration');
-  startGame(demoConfig);
-}
+  if (process.env.NODE_ENV !== 'production') {
+    const demoConfig: GameConfig = {
+      player: player,
+      authCookie: token as string,
+      backendUrl: 'http://localhost:5000/game',
+    };
+
+    startGame(demoConfig);
+  }
+})();

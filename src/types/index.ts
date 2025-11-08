@@ -1,10 +1,6 @@
-/**
- * Player information interface
- */
-export interface Player {
-  id: string;
-  username: string;
-}
+//todo migrate all to models
+
+import {Player} from "../models/Player";
 
 /**
  * Map tile data from backend

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
-import { Player, IsometricMapData } from '../types';
+import { IsometricMapData } from '../types';
 import { ApiService } from '../services/ApiService';
+import {Player} from "../models/Player";
 
 /**
  * Main game scene with isometric map rendering

@@ -7,7 +7,7 @@ export class ApiService {
   private authCookie: string;
   private backendUrl: string;
 
-  constructor(authCookie: string, backendUrl: string = '/api') {
+  constructor(authCookie: string, backendUrl: string = '/game') {
     this.authCookie = authCookie;
     this.backendUrl = backendUrl;
     this.setCookie();
@@ -26,7 +26,7 @@ export class ApiService {
    */
   async fetchMapData(): Promise<IsometricMapData> {
     try {
-      const response = await fetch(`${this.backendUrl}/map`, {
+      const response = await fetch(`${this.backendUrl}/map/1`, {
         method: 'GET',
         credentials: 'include', // Include cookies in the request
         headers: {
