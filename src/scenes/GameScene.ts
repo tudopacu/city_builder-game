@@ -1,24 +1,24 @@
 import Phaser from 'phaser';
-import { IsometricMapData } from '../types';
-import { ApiService } from '../services/ApiService';
+import { MapService } from '../services/MapService';
 import {Player} from "../models/Player";
+import {Map} from "../models/Map";
 
 /**
  * Main game scene with isometric map rendering
  */
 export class GameScene extends Phaser.Scene {
   private player: Player;
-  private apiService: ApiService;
-  private mapData: IsometricMapData | null = null;
+  private mapService: MapService;
+  private map: Map | null = null;
   private tileWidth = 64;
   private tileHeight = 32;
   private cameraDragStartX = 0;
   private cameraDragStartY = 0;
 
-  constructor(player: Player, apiService: ApiService) {
+  constructor(player: Player, mapService: MapService) {
     super({ key: 'GameScene' });
     this.player = player;
-    this.apiService = apiService;
+    this.mapService = mapService;
   }
 
   preload(): void {
@@ -30,8 +30,8 @@ export class GameScene extends Phaser.Scene {
   async create(): Promise<void> {
     // Fetch map data from backend
     console.log('Fetching map data from backend...');
-    this.mapData = await this.apiService.fetchMapData();
-    console.log('Map data loaded:', this.mapData);
+    this.map = (await this.mapService.fetchMap()) || null;
+    console.log('Map data loaded:', this.map);
 
     // Display player info
     this.add.text(10, 10, `Player: ${this.player.username}`, {
@@ -52,7 +52,7 @@ export class GameScene extends Phaser.Scene {
    * Create and render the isometric map
    */
   private createIsometricMap(): void {
-    if (!this.mapData) return;
+    if (!this.map) return;
 
     const graphics = this.add.graphics();
     
@@ -60,12 +60,12 @@ export class GameScene extends Phaser.Scene {
     const offsetX = this.cameras.main.width / 2;
     const offsetY = 100;
 
-    this.mapData.tiles.forEach((tile) => {
+    this.map.terrains.forEach((tile) => {
       const isoX = (tile.x - tile.y) * (this.tileWidth / 2);
       const isoY = (tile.x + tile.y) * (this.tileHeight / 2);
 
       // Draw tile diamond shape
-      const tileColor = this.getTileColor(tile.tileType);
+      const tileColor = this.getTileColor(tile.type);
       graphics.fillStyle(tileColor, 1);
       graphics.lineStyle(1, 0x000000, 1);
 
@@ -83,9 +83,9 @@ export class GameScene extends Phaser.Scene {
       graphics.strokePath();
 
       // Add building if exists
-      if (tile.buildingId) {
-        this.drawBuilding(graphics, x, y, tile.buildingId);
-      }
+      // if (tile.buildingId) {
+      //   this.drawBuilding(graphics, x, y, tile.buildingId);
+      // }
     });
   }
 
@@ -105,16 +105,16 @@ export class GameScene extends Phaser.Scene {
   /**
    * Draw a simple building representation
    */
-  private drawBuilding(graphics: Phaser.GameObjects.Graphics, x: number, y: number, _buildingId: string): void {
-    graphics.fillStyle(0xa0522d, 1);
-    graphics.fillRect(x - 15, y - 30, 30, 30);
-    graphics.fillStyle(0x8b4513, 1);
-    graphics.fillTriangle(
-      x - 20, y - 30,
-      x, y - 45,
-      x + 20, y - 30
-    );
-  }
+  // private drawBuilding(graphics: Phaser.GameObjects.Graphics, x: number, y: number, _buildingId: string): void {
+  //   graphics.fillStyle(0xa0522d, 1);
+  //   graphics.fillRect(x - 15, y - 30, 30, 30);
+  //   graphics.fillStyle(0x8b4513, 1);
+  //   graphics.fillTriangle(
+  //     x - 20, y - 30,
+  //     x, y - 45,
+  //     x + 20, y - 30
+  //   );
+  // }
 
   /**
    * Setup camera controls for panning
