@@ -3,6 +3,20 @@ import { MapService } from '../services/MapService';
 import {Player} from "../models/Player";
 import {Map} from "../models/Map";
 
+const TILE_WIDTH = 64;      // width of a tile in your PNG
+const TILE_HEIGHT = 64;     // height of a tile in your PNG
+const TILE_SET_KEY = "terrain_tiles";
+
+const RAW_W = 256;
+
+const CROP_X = 0; //taie stanga
+const CROP_Y = 0; //taie sus
+const CROP_W = 64; //taie dreapta
+const CROP_H = 64; //taie jos
+
+const HALF_W = CROP_W / 2;
+const HALF_H = CROP_H / 2;
+
 /**
  * Main game scene with isometric map rendering
  */
@@ -10,8 +24,6 @@ export class GameScene extends Phaser.Scene {
   private player: Player;
   private mapService: MapService;
   private map: Map | null = null;
-  private tileWidth = 64;
-  private tileHeight = 32;
   private cameraDragStartX = 0;
   private cameraDragStartY = 0;
 
@@ -21,17 +33,19 @@ export class GameScene extends Phaser.Scene {
     this.mapService = mapService;
   }
 
-  preload(): void {
-    // Load assets here
-    // For now, we'll use simple graphics
-    console.log(`Game loaded for player: ${this.player.username} (ID: ${this.player.id})`);
+  preload() {
+    this.load.spritesheet(TILE_SET_KEY, "assets/grass_and_water.png", {
+      frameWidth: TILE_WIDTH,
+      frameHeight: TILE_HEIGHT,
+    });
   }
 
-  async create(): Promise<void> {
-    // Fetch map data from backend
-    console.log('Fetching map data from backend...');
+
+  async create() {
+
     this.map = (await this.mapService.fetchMap()) || null;
-    console.log('Map data loaded:', this.map);
+
+    console.log("Map data loaded:", this.map);
 
     // Display player info
     this.add.text(10, 10, `Player: ${this.player.username}`, {
@@ -41,80 +55,33 @@ export class GameScene extends Phaser.Scene {
       padding: { x: 5, y: 5 },
     });
 
-    // Create the isometric map
-    this.createIsometricMap();
+    const terrains = this.map?.terrains;
 
-    // Setup camera controls
+    if (!terrains) {
+      console.error("No terrain data available to render the map.");
+      return;
+    }
+
+    terrains.forEach(tile => {
+      const isoX = (tile.x - tile.y) * HALF_W;
+      const isoY = (tile.x + tile.y) * HALF_H / 2;
+
+      // Fix: Use the correct texture key + integer tilesPerRow
+      const sourceImage = this.textures.get(TILE_SET_KEY).getSourceImage();
+      const tilesPerRow = Math.floor(sourceImage.width / RAW_W);
+
+      // Fix: Integer frame index
+      const frameIndex = tile.set_y * tilesPerRow + tile.set_x;
+
+      const img = this.add.image(isoX, isoY, TILE_SET_KEY, frameIndex);
+
+      img.setCrop(CROP_X, CROP_Y, CROP_W, CROP_H);
+      img.setOrigin(0.5, 1);
+    });
+
+
     this.setupCameraControls();
   }
-
-  /**
-   * Create and render the isometric map
-   */
-  private createIsometricMap(): void {
-    if (!this.map) return;
-
-    const graphics = this.add.graphics();
-    
-    // Center the map in the view
-    const offsetX = this.cameras.main.width / 2;
-    const offsetY = 100;
-
-    this.map.terrains.forEach((tile) => {
-      const isoX = (tile.x - tile.y) * (this.tileWidth / 2);
-      const isoY = (tile.x + tile.y) * (this.tileHeight / 2);
-
-      // Draw tile diamond shape
-      const tileColor = this.getTileColor(tile.type);
-      graphics.fillStyle(tileColor, 1);
-      graphics.lineStyle(1, 0x000000, 1);
-
-      // Draw isometric tile
-      const x = offsetX + isoX;
-      const y = offsetY + isoY;
-
-      graphics.beginPath();
-      graphics.moveTo(x, y);
-      graphics.lineTo(x + this.tileWidth / 2, y + this.tileHeight / 2);
-      graphics.lineTo(x, y + this.tileHeight);
-      graphics.lineTo(x - this.tileWidth / 2, y + this.tileHeight / 2);
-      graphics.closePath();
-      graphics.fillPath();
-      graphics.strokePath();
-
-      // Add building if exists
-      // if (tile.buildingId) {
-      //   this.drawBuilding(graphics, x, y, tile.buildingId);
-      // }
-    });
-  }
-
-  /**
-   * Get color based on tile type
-   */
-  private getTileColor(tileType: string): number {
-    const colors: { [key: string]: number } = {
-      grass: 0x4a9b4a,
-      water: 0x4a7ba7,
-      dirt: 0x8b7355,
-      road: 0x5a5a5a,
-    };
-    return colors[tileType] || 0x808080;
-  }
-
-  /**
-   * Draw a simple building representation
-   */
-  // private drawBuilding(graphics: Phaser.GameObjects.Graphics, x: number, y: number, _buildingId: string): void {
-  //   graphics.fillStyle(0xa0522d, 1);
-  //   graphics.fillRect(x - 15, y - 30, 30, 30);
-  //   graphics.fillStyle(0x8b4513, 1);
-  //   graphics.fillTriangle(
-  //     x - 20, y - 30,
-  //     x, y - 45,
-  //     x + 20, y - 30
-  //   );
-  // }
 
   /**
    * Setup camera controls for panning

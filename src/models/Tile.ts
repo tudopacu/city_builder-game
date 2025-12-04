@@ -1,8 +1,9 @@
 export interface Tile {
-    id: number;
+    tile_id: number;
     x: number;
     y: number;
     type: string;
     walkable: boolean;
-    imageUrl: string;
+    set_x: number;
+    set_y: number;
 }
