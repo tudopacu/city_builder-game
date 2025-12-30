@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { MapService } from '../services/MapService';
 import {Player} from "../models/Player";
 import {Map} from "../models/Map";
+import { BuildingService } from '../services/BuildingService';
+import { Building } from '../models/Building';
 
 const TILE_WIDTH = 64;      // width of a tile in your PNG
 const TILE_HEIGHT = 64;     // height of a tile in your PNG
@@ -79,8 +81,58 @@ export class GameScene extends Phaser.Scene {
       img.setOrigin(0.5, 1);
     });
 
+    // Load and render player buildings
+    await this.loadPlayerBuildings();
 
     this.setupCameraControls();
+  }
+
+  /**
+   * Load and render player buildings on the map
+   */
+  private async loadPlayerBuildings(): Promise<void> {
+    const buildings = await BuildingService.getPlayerBuildings();
+    
+    console.log("Player buildings loaded:", buildings);
+
+    if (!buildings || buildings.length === 0) {
+      console.log("No buildings to render");
+      return;
+    }
+
+    buildings.forEach(building => {
+      this.renderBuilding(building);
+    });
+  }
+
+  /**
+   * Render a single building on the map
+   * Takes into account the tile size and isometric coordinates
+   */
+  private renderBuilding(building: Building): void {
+    // Calculate isometric position based on building coordinates
+    const isoX = (building.x - building.y) * HALF_W;
+    const isoY = (building.x + building.y) * HALF_H / 2;
+
+    // Create a rectangle to represent the building
+    // Size is based on the building.size property (e.g., 1 for 1x1, 2 for 2x2)
+    const buildingWidth = building.size * CROP_W;
+    const buildingHeight = building.size * CROP_H / 2;
+
+    // Create a graphics object for the building
+    const graphics = this.add.graphics();
+    graphics.fillStyle(0x8B4513, 1); // Brown color for buildings
+    graphics.fillRect(-buildingWidth / 2, -buildingHeight, buildingWidth, buildingHeight);
+    graphics.setPosition(isoX, isoY);
+
+    // Add building name label
+    const text = this.add.text(isoX, isoY - buildingHeight - 10, building.name, {
+      fontSize: '12px',
+      color: '#ffffff',
+      backgroundColor: '#000000',
+      padding: { x: 3, y: 2 },
+    });
+    text.setOrigin(0.5, 1);
   }
 
   /**
