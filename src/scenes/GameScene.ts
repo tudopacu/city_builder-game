@@ -19,6 +19,10 @@ const CROP_H = 64; //taie jos
 const HALF_W = CROP_W / 2;
 const HALF_H = CROP_H / 2;
 
+// Building rendering constants
+const BUILDING_COLOR = 0x8B4513; // Brown color for buildings
+const BUILDING_LABEL_OFFSET_Y = 10; // Offset for building name label
+
 /**
  * Main game scene with isometric map rendering
  */
@@ -65,8 +69,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     terrains.forEach(tile => {
-      const isoX = (tile.x - tile.y) * HALF_W;
-      const isoY = (tile.x + tile.y) * HALF_H / 2;
+      const { isoX, isoY } = this.toIsometricCoordinates(tile.x, tile.y);
 
       // Fix: Use the correct texture key + integer tilesPerRow
       const sourceImage = this.textures.get(TILE_SET_KEY).getSourceImage();
@@ -85,6 +88,15 @@ export class GameScene extends Phaser.Scene {
     await this.loadPlayerBuildings();
 
     this.setupCameraControls();
+  }
+
+  /**
+   * Convert grid coordinates to isometric screen coordinates
+   */
+  private toIsometricCoordinates(x: number, y: number): { isoX: number; isoY: number } {
+    const isoX = (x - y) * HALF_W;
+    const isoY = (x + y) * HALF_H / 2;
+    return { isoX, isoY };
   }
 
   /**
@@ -111,22 +123,21 @@ export class GameScene extends Phaser.Scene {
    */
   private renderBuilding(building: Building): void {
     // Calculate isometric position based on building coordinates
-    const isoX = (building.x - building.y) * HALF_W;
-    const isoY = (building.x + building.y) * HALF_H / 2;
+    const { isoX, isoY } = this.toIsometricCoordinates(building.x, building.y);
 
     // Create a rectangle to represent the building
     // Size is based on the building.size property (e.g., 1 for 1x1, 2 for 2x2)
     const buildingWidth = building.size * CROP_W;
-    const buildingHeight = building.size * CROP_H / 2;
+    const buildingHeight = building.size * CROP_H;
 
     // Create a graphics object for the building
     const graphics = this.add.graphics();
-    graphics.fillStyle(0x8B4513, 1); // Brown color for buildings
+    graphics.fillStyle(BUILDING_COLOR, 1);
     graphics.fillRect(-buildingWidth / 2, -buildingHeight, buildingWidth, buildingHeight);
     graphics.setPosition(isoX, isoY);
 
     // Add building name label
-    const text = this.add.text(isoX, isoY - buildingHeight - 10, building.name, {
+    const text = this.add.text(isoX, isoY - buildingHeight - BUILDING_LABEL_OFFSET_Y, building.name, {
       fontSize: '12px',
       color: '#ffffff',
       backgroundColor: '#000000',
