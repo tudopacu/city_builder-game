@@ -104,11 +104,8 @@ export class GameScene extends Phaser.Scene {
    */
   private async loadPlayerBuildings(): Promise<void> {
     const buildings = await BuildingService.getPlayerBuildings();
-    
-    console.log("Player buildings loaded:", buildings);
 
-    if (!buildings || buildings.length === 0) {
-      console.log("No buildings to render");
+    if (buildings.length === 0) {
       return;
     }
 
