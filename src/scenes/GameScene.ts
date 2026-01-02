@@ -22,6 +22,27 @@ const HALF_H = CROP_H / 2;
 // Building rendering constants
 const BUILDING_LABEL_OFFSET_Y = 10; // Offset for building name label
 
+// Menu styling constants
+const MENU_COLORS = {
+  BACKGROUND: 0x1e3a8a,      // Dark blue background
+  BORDER: 0x3b82f6,          // Medium blue border
+  BUTTON: 0x3b82f6,          // Medium blue button
+  BUTTON_HOVER: 0x60a5fa,    // Light blue on hover
+  TEXT: '#ffffff',           // White text
+};
+
+const MENU_ALPHA = {
+  BACKGROUND: 0.2,           // 20% opaque (80% transparent)
+  BUTTON: 0.3,               // 30% opaque
+  BUTTON_HOVER: 0.5,         // 50% opaque
+};
+
+const MENU_TEXT_STYLE = {
+  fontSize: '16px',
+  color: MENU_COLORS.TEXT,
+  fontStyle: 'bold',
+};
+
 /**
  * Main game scene with isometric map rendering
  */
@@ -215,10 +236,10 @@ export class GameScene extends Phaser.Scene {
     this.menuContainer = this.add.container(adjustedX, adjustedY);
     this.menuContainer.setDepth(10000); // Ensure menu is on top
 
-    // Menu background with 80% transparency (alpha = 0.2 means 80% transparent)
-    const menuBg = this.add.rectangle(0, 0, menuWidth, menuHeight, 0x1e3a8a, 0.2);
+    // Menu background with 80% transparency (alpha = 0.2 means 20% opaque)
+    const menuBg = this.add.rectangle(0, 0, menuWidth, menuHeight, MENU_COLORS.BACKGROUND, MENU_ALPHA.BACKGROUND);
     menuBg.setOrigin(0, 0);
-    menuBg.setStrokeStyle(2, 0x3b82f6);
+    menuBg.setStrokeStyle(2, MENU_COLORS.BORDER);
     this.menuContainer.add(menuBg);
 
     // Buildings button
@@ -229,7 +250,7 @@ export class GameScene extends Phaser.Scene {
       buttonHeight,
       'Buildings',
       () => {
-        console.log('Buildings button clicked');
+        // TODO: Implement building placement functionality
         this.closeMenu();
       }
     );
@@ -243,7 +264,7 @@ export class GameScene extends Phaser.Scene {
       buttonHeight,
       'Roads',
       () => {
-        console.log('Roads button clicked');
+        // TODO: Implement road placement functionality
         this.closeMenu();
       }
     );
@@ -267,26 +288,22 @@ export class GameScene extends Phaser.Scene {
     const buttonContainer = this.add.container(x, y);
 
     // Button background
-    const buttonBg = this.add.rectangle(0, 0, width, height, 0x3b82f6, 0.3);
+    const buttonBg = this.add.rectangle(0, 0, width, height, MENU_COLORS.BUTTON, MENU_ALPHA.BUTTON);
     buttonBg.setOrigin(0, 0);
-    buttonBg.setStrokeStyle(2, 0x60a5fa);
+    buttonBg.setStrokeStyle(2, MENU_COLORS.BUTTON_HOVER);
     buttonBg.setInteractive({ useHandCursor: true });
 
     // Button text
-    const buttonText = this.add.text(width / 2, height / 2, text, {
-      fontSize: '16px',
-      color: '#ffffff',
-      fontStyle: 'bold',
-    });
+    const buttonText = this.add.text(width / 2, height / 2, text, MENU_TEXT_STYLE);
     buttonText.setOrigin(0.5, 0.5);
 
     // Hover effects
     buttonBg.on('pointerover', () => {
-      buttonBg.setFillStyle(0x60a5fa, 0.5);
+      buttonBg.setFillStyle(MENU_COLORS.BUTTON_HOVER, MENU_ALPHA.BUTTON_HOVER);
     });
 
     buttonBg.on('pointerout', () => {
-      buttonBg.setFillStyle(0x3b82f6, 0.3);
+      buttonBg.setFillStyle(MENU_COLORS.BUTTON, MENU_ALPHA.BUTTON);
     });
 
     // Click handler
