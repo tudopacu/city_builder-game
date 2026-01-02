@@ -22,6 +22,10 @@ const HALF_H = CROP_H / 2;
 // Building rendering constants
 const BUILDING_LABEL_OFFSET_Y = 10; // Offset for building name label
 
+// Menu constants
+const DRAG_THRESHOLD_PIXELS = 5; // Minimum pixels moved to consider it a drag
+const MENU_Z_INDEX = 10000;       // Z-index to ensure menu is on top
+
 // Menu styling constants
 const MENU_COLORS = {
   BACKGROUND: 0x1e3a8a,      // Dark blue background
@@ -40,7 +44,7 @@ const MENU_ALPHA = {
 const MENU_TEXT_STYLE = {
   fontSize: '16px',
   color: MENU_COLORS.TEXT,
-  fontStyle: 'bold',
+  fontStyle: 'bold' as const,  // Phaser uses fontStyle for bold, not fontWeight
 };
 
 /**
@@ -182,8 +186,8 @@ export class GameScene extends Phaser.Scene {
         const deltaX = pointer.x - this.cameraDragStartX;
         const deltaY = pointer.y - this.cameraDragStartY;
 
-        // Consider it dragging if moved more than 5 pixels
-        if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+        // Consider it dragging if moved more than threshold
+        if (Math.abs(deltaX) > DRAG_THRESHOLD_PIXELS || Math.abs(deltaY) > DRAG_THRESHOLD_PIXELS) {
           this.isDragging = true;
         }
 
@@ -234,7 +238,7 @@ export class GameScene extends Phaser.Scene {
 
     // Create container for menu
     this.menuContainer = this.add.container(adjustedX, adjustedY);
-    this.menuContainer.setDepth(10000); // Ensure menu is on top
+    this.menuContainer.setDepth(MENU_Z_INDEX); // Ensure menu is on top
 
     // Menu background with 80% transparency (alpha = 0.2 means 20% opaque)
     const menuBg = this.add.rectangle(0, 0, menuWidth, menuHeight, MENU_COLORS.BACKGROUND, MENU_ALPHA.BACKGROUND);
