@@ -54,6 +54,7 @@ export class GameScene extends Phaser.Scene {
   private cameraDragStartY = 0;
   private isDragging = false;
   private menuContainer: Phaser.GameObjects.Container | null = null;
+  private menuClickHandler: ((pointer: Phaser.Input.Pointer) => void) | null = null;
 
   constructor(player: Player, mapService: MapService) {
     super({ key: 'GameScene' });
@@ -195,8 +196,8 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-      // Only open menu if it was a click (not a drag)
-      if (!this.isDragging) {
+      // Only open menu if it was a left-click (not a drag)
+      if (!this.isDragging && pointer.leftButtonReleased()) {
         this.openMenu(pointer.x, pointer.y);
       }
       this.isDragging = false;
@@ -217,8 +218,7 @@ export class GameScene extends Phaser.Scene {
   private openMenu(x: number, y: number): void {
     // Close existing menu if any
     if (this.menuContainer) {
-      this.menuContainer.destroy();
-      this.menuContainer = null;
+      this.closeMenu();
     }
 
     // Menu dimensions
@@ -272,6 +272,26 @@ export class GameScene extends Phaser.Scene {
 
     // Make menu interactive to prevent clicks from passing through
     menuBg.setInteractive();
+
+    // Add click handler to close menu when clicking outside
+    this.menuClickHandler = (pointer: Phaser.Input.Pointer) => {
+      if (this.menuContainer && pointer.leftButtonReleased()) {
+        // Check if click is outside the menu bounds
+        const menuBounds = new Phaser.Geom.Rectangle(
+          adjustedX,
+          adjustedY,
+          menuWidth,
+          menuHeight
+        );
+        
+        if (!Phaser.Geom.Rectangle.Contains(menuBounds, pointer.x, pointer.y)) {
+          this.closeMenu();
+        }
+      }
+    };
+
+    // Listen for clicks on the scene
+    this.input.on('pointerup', this.menuClickHandler);
   }
 
   /**
@@ -307,7 +327,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Click handler
-    buttonBg.on('pointerdown', () => {
+    buttonBg.on('pointerup', () => {
       onClick();
     });
 
@@ -333,6 +353,12 @@ export class GameScene extends Phaser.Scene {
     if (this.menuContainer) {
       this.menuContainer.destroy();
       this.menuContainer = null;
+    }
+    
+    // Remove the click handler
+    if (this.menuClickHandler) {
+      this.input.off('pointerup', this.menuClickHandler);
+      this.menuClickHandler = null;
     }
   }
 
