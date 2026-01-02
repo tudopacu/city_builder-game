@@ -1,11 +1,11 @@
 import { CONFIG } from '../configuration';
 import { GetPlayerBuildingsResponse } from '../dto/getPlayerBuildingsResponse';
-import { Building } from '../models/Building';
+import {PlayerBuilding} from "../models/PlayerBuilding";
 
 export class BuildingService {
-    static async getPlayerBuildings(): Promise<Building[]> {
+    static async getPlayerBuildings(): Promise<PlayerBuilding[]> {
         try {
-            const response = await fetch(`${CONFIG.backendUrl}/game/player_buildings`, {
+            const response = await fetch(`${CONFIG.backendUrl}/game/get_player_buildings/2/1`, {
                 method: 'GET',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
@@ -16,7 +16,7 @@ export class BuildingService {
             }
 
             const data = await response.json() as GetPlayerBuildingsResponse;
-            return data.buildings || [];
+            return data.player_buildings || [];
         } catch (error) {
             console.error('Error fetching player buildings:', error);
             return [];

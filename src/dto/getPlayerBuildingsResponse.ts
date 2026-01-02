@@ -1,5 +1,5 @@
-import { Building } from "../models/Building";
+import {PlayerBuilding} from "../models/PlayerBuilding";
 
 export type GetPlayerBuildingsResponse = {
-    buildings: Building[];
+    player_buildings: PlayerBuilding[];
 };

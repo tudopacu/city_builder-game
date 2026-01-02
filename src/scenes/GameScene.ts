@@ -3,7 +3,7 @@ import { MapService } from '../services/MapService';
 import {Player} from "../models/Player";
 import {Map} from "../models/Map";
 import { BuildingService } from '../services/BuildingService';
-import { Building } from '../models/Building';
+import {PlayerBuilding} from "../models/PlayerBuilding";
 
 const TILE_WIDTH = 64;      // width of a tile in your PNG
 const TILE_HEIGHT = 64;     // height of a tile in your PNG
@@ -20,7 +20,6 @@ const HALF_W = CROP_W / 2;
 const HALF_H = CROP_H / 2;
 
 // Building rendering constants
-const BUILDING_COLOR = 0x8B4513; // Brown color for buildings
 const BUILDING_LABEL_OFFSET_Y = 10; // Offset for building name label
 
 /**
@@ -44,14 +43,15 @@ export class GameScene extends Phaser.Scene {
       frameWidth: TILE_WIDTH,
       frameHeight: TILE_HEIGHT,
     });
+    this.load.image('casa', 'assets/casa.png');
   }
 
 
-  async create() {
+  create() {
 
-    this.map = (await this.mapService.fetchMap()) || null;
 
-    console.log("Map data loaded:", this.map);
+    this.drawMap();
+    this.loadPlayerBuildings();
 
     // Display player info
     this.add.text(10, 10, `Player: ${this.player.username}`, {
@@ -60,6 +60,15 @@ export class GameScene extends Phaser.Scene {
       backgroundColor: '#000000',
       padding: { x: 5, y: 5 },
     });
+
+
+    this.setupCameraControls();
+  }
+
+   private async drawMap(): Promise<void> {
+    this.map = (await this.mapService.fetchMap()) || null;
+
+    console.log("Map data loaded:", this.map);
 
     const terrains = this.map?.terrains;
 
@@ -83,11 +92,6 @@ export class GameScene extends Phaser.Scene {
       img.setCrop(CROP_X, CROP_Y, CROP_W, CROP_H);
       img.setOrigin(0.5, 1);
     });
-
-    // Load and render player buildings
-    await this.loadPlayerBuildings();
-
-    this.setupCameraControls();
   }
 
   /**
@@ -103,14 +107,14 @@ export class GameScene extends Phaser.Scene {
    * Load and render player buildings on the map
    */
   private async loadPlayerBuildings(): Promise<void> {
-    const buildings = await BuildingService.getPlayerBuildings();
+    const playerBuildings = await BuildingService.getPlayerBuildings();
 
-    if (buildings.length === 0) {
+    if (playerBuildings.length === 0) {
       return;
     }
 
-    buildings.forEach(building => {
-      this.renderBuilding(building);
+    playerBuildings.forEach(playerBuilding => {
+      this.renderBuilding(playerBuilding);
     });
   }
 
@@ -118,29 +122,24 @@ export class GameScene extends Phaser.Scene {
    * Render a single building on the map
    * Takes into account the tile size and isometric coordinates
    */
-  private renderBuilding(building: Building): void {
+  private renderBuilding(playerBuilding: PlayerBuilding): void {
     // Calculate isometric position based on building coordinates
-    const { isoX, isoY } = this.toIsometricCoordinates(building.x, building.y);
+    const { isoX, isoY } = this.toIsometricCoordinates(playerBuilding.x, playerBuilding.y);
 
-    // Create a rectangle to represent the building
-    // Size is based on the building.size property (e.g., 1 for 1x1, 2 for 2x2)
-    const buildingWidth = building.size * CROP_W;
-    const buildingHeight = building.size * CROP_H;
-
-    // Create a graphics object for the building
-    const graphics = this.add.graphics();
-    graphics.fillStyle(BUILDING_COLOR, 1);
-    graphics.fillRect(-buildingWidth / 2, -buildingHeight, buildingWidth, buildingHeight);
-    graphics.setPosition(isoX, isoY);
+    // Add the building image
+    const buildingImage = this.add.image(isoX, isoY, 'casa');
+    buildingImage.setOrigin(0.5, 1);
+    buildingImage.setDepth(isoY); // Set depth based on isoY for proper layering
 
     // Add building name label
-    const text = this.add.text(isoX, isoY - buildingHeight - BUILDING_LABEL_OFFSET_Y, building.name, {
+    const text = this.add.text(isoX, isoY - BUILDING_LABEL_OFFSET_Y, playerBuilding.building.name, {
       fontSize: '12px',
       color: '#ffffff',
       backgroundColor: '#000000',
       padding: { x: 3, y: 2 },
     });
     text.setOrigin(0.5, 1);
+    text.setDepth(isoY + 1); // Ensure the label is above the building
   }
 
   /**
@@ -157,10 +156,10 @@ export class GameScene extends Phaser.Scene {
       if (pointer.isDown) {
         const deltaX = pointer.x - this.cameraDragStartX;
         const deltaY = pointer.y - this.cameraDragStartY;
-        
+
         this.cameras.main.scrollX -= deltaX;
         this.cameras.main.scrollY -= deltaY;
-        
+
         this.cameraDragStartX = pointer.x;
         this.cameraDragStartY = pointer.y;
       }
