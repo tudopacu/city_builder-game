@@ -4,6 +4,7 @@ import {Player} from "../models/Player";
 import {Map} from "../models/Map";
 import { BuildingService } from '../services/BuildingService';
 import {PlayerBuilding} from "../models/PlayerBuilding";
+import { ContextMenu } from '../ui/ContextMenu';
 
 const TILE_WIDTH = 64;      // width of a tile in your PNG
 const TILE_HEIGHT = 64;     // height of a tile in your PNG
@@ -22,30 +23,8 @@ const HALF_H = CROP_H / 2;
 // Building rendering constants
 const BUILDING_LABEL_OFFSET_Y = 10; // Offset for building name label
 
-// Menu constants
+// Camera constants
 const DRAG_THRESHOLD_PIXELS = 5; // Minimum pixels moved to consider it a drag
-const MENU_Z_INDEX = 10000;       // Z-index to ensure menu is on top
-
-// Menu styling constants
-const MENU_COLORS = {
-  BACKGROUND: 0x1e3a8a,      // Dark blue background
-  BORDER: 0x3b82f6,          // Medium blue border
-  BUTTON: 0x3b82f6,          // Medium blue button
-  BUTTON_HOVER: 0x60a5fa,    // Light blue on hover
-  TEXT: '#ffffff',           // White text
-};
-
-const MENU_ALPHA = {
-  BACKGROUND: 0.2,           // 20% opaque (80% transparent)
-  BUTTON: 0.3,               // 30% opaque
-  BUTTON_HOVER: 0.5,         // 50% opaque
-};
-
-const MENU_TEXT_STYLE = {
-  fontSize: '16px',
-  color: MENU_COLORS.TEXT,
-  fontStyle: 'bold' as const,  // Phaser uses fontStyle for bold, not fontWeight
-};
 
 /**
  * Main game scene with isometric map rendering
@@ -57,13 +36,13 @@ export class GameScene extends Phaser.Scene {
   private cameraDragStartX = 0;
   private cameraDragStartY = 0;
   private isDragging = false;
-  private menuContainer: Phaser.GameObjects.Container | null = null;
-  private menuClickHandler: ((pointer: Phaser.Input.Pointer) => void) | null = null;
+  private contextMenu: ContextMenu;
 
   constructor(player: Player, mapService: MapService) {
     super({ key: 'GameScene' });
     this.player = player;
     this.mapService = mapService;
+    this.contextMenu = new ContextMenu(this);
   }
 
   preload() {
@@ -202,7 +181,16 @@ export class GameScene extends Phaser.Scene {
     this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
       // Only open menu if it was a left-click (not a drag)
       if (!this.isDragging && pointer.leftButtonReleased()) {
-        this.openMenu(pointer.x, pointer.y);
+        this.contextMenu.open(
+          pointer.x,
+          pointer.y,
+          () => {
+            // TODO: Implement building placement functionality
+          },
+          () => {
+            // TODO: Implement road placement functionality
+          }
+        );
       }
       this.isDragging = false;
     });
@@ -213,157 +201,6 @@ export class GameScene extends Phaser.Scene {
       const newZoom = Phaser.Math.Clamp(this.cameras.main.zoom + zoomDelta, 0.5, 2);
       this.cameras.main.setZoom(newZoom);
     });
-  }
-
-  /**
-   * Open a menu at the specified screen coordinates
-   * The menu is positioned to be fully visible within screen bounds
-   */
-  private openMenu(x: number, y: number): void {
-    // Close existing menu if any
-    if (this.menuContainer) {
-      this.closeMenu();
-    }
-
-    // Menu dimensions
-    const menuWidth = 150;
-    const menuHeight = 110;
-    const buttonHeight = 40;
-    const buttonSpacing = 10;
-    const menuPadding = 10;
-
-    // Adjust position to keep menu within screen bounds
-    const adjustedX = this.adjustMenuPosition(x, menuWidth, this.cameras.main.width);
-    const adjustedY = this.adjustMenuPosition(y, menuHeight, this.cameras.main.height);
-
-    // Create container for menu
-    this.menuContainer = this.add.container(adjustedX, adjustedY);
-    this.menuContainer.setDepth(MENU_Z_INDEX); // Ensure menu is on top
-
-    // Menu background with 80% transparency (alpha = 0.2 means 20% opaque)
-    const menuBg = this.add.rectangle(0, 0, menuWidth, menuHeight, MENU_COLORS.BACKGROUND, MENU_ALPHA.BACKGROUND);
-    menuBg.setOrigin(0, 0);
-    menuBg.setStrokeStyle(2, MENU_COLORS.BORDER);
-    this.menuContainer.add(menuBg);
-
-    // Buildings button
-    const buildingsButton = this.createMenuButton(
-      menuPadding,
-      menuPadding,
-      menuWidth - 2 * menuPadding,
-      buttonHeight,
-      'Buildings',
-      () => {
-        // TODO: Implement building placement functionality
-        this.closeMenu();
-      }
-    );
-    this.menuContainer.add(buildingsButton);
-
-    // Roads button
-    const roadsButton = this.createMenuButton(
-      menuPadding,
-      menuPadding + buttonHeight + buttonSpacing,
-      menuWidth - 2 * menuPadding,
-      buttonHeight,
-      'Roads',
-      () => {
-        // TODO: Implement road placement functionality
-        this.closeMenu();
-      }
-    );
-    this.menuContainer.add(roadsButton);
-
-    // Make menu interactive to prevent clicks from passing through
-    menuBg.setInteractive();
-
-    // Add click handler to close menu when clicking outside
-    this.menuClickHandler = (pointer: Phaser.Input.Pointer) => {
-      if (this.menuContainer && pointer.leftButtonReleased()) {
-        // Check if click is outside the menu bounds
-        const menuBounds = new Phaser.Geom.Rectangle(
-          adjustedX,
-          adjustedY,
-          menuWidth,
-          menuHeight
-        );
-        
-        if (!Phaser.Geom.Rectangle.Contains(menuBounds, pointer.x, pointer.y)) {
-          this.closeMenu();
-        }
-      }
-    };
-
-    // Listen for clicks on the scene
-    this.input.on('pointerup', this.menuClickHandler);
-  }
-
-  /**
-   * Create a menu button with text
-   */
-  private createMenuButton(
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    text: string,
-    onClick: () => void
-  ): Phaser.GameObjects.Container {
-    const buttonContainer = this.add.container(x, y);
-
-    // Button background
-    const buttonBg = this.add.rectangle(0, 0, width, height, MENU_COLORS.BUTTON, MENU_ALPHA.BUTTON);
-    buttonBg.setOrigin(0, 0);
-    buttonBg.setStrokeStyle(2, MENU_COLORS.BUTTON_HOVER);
-    buttonBg.setInteractive({ useHandCursor: true });
-
-    // Button text
-    const buttonText = this.add.text(width / 2, height / 2, text, MENU_TEXT_STYLE);
-    buttonText.setOrigin(0.5, 0.5);
-
-    // Hover effects
-    buttonBg.on('pointerover', () => {
-      buttonBg.setFillStyle(MENU_COLORS.BUTTON_HOVER, MENU_ALPHA.BUTTON_HOVER);
-    });
-
-    buttonBg.on('pointerout', () => {
-      buttonBg.setFillStyle(MENU_COLORS.BUTTON, MENU_ALPHA.BUTTON);
-    });
-
-    // Click handler
-    buttonBg.on('pointerup', () => {
-      onClick();
-    });
-
-    buttonContainer.add([buttonBg, buttonText]);
-    return buttonContainer;
-  }
-
-  /**
-   * Adjust menu position to keep it within screen bounds
-   */
-  private adjustMenuPosition(position: number, menuSize: number, screenSize: number): number {
-    // If menu would go off the right/bottom edge, position it to the left/top of the cursor
-    if (position + menuSize > screenSize) {
-      return Math.max(0, screenSize - menuSize);
-    }
-    return position;
-  }
-
-  /**
-   * Close the menu
-   */
-  private closeMenu(): void {
-    if (this.menuContainer) {
-      this.menuContainer.destroy();
-      this.menuContainer = null;
-    }
-    
-    // Remove the click handler
-    if (this.menuClickHandler) {
-      this.input.off('pointerup', this.menuClickHandler);
-      this.menuClickHandler = null;
-    }
   }
 
   update(): void {
