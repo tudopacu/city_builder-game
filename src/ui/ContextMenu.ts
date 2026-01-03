@@ -170,10 +170,11 @@ export class ContextMenu {
   }
 
   /**
-   * Check if a button was just clicked and reset the flag
+   * Check if a button was just clicked and consume the flag
+   * Returns true if a button was clicked, then resets the flag to false
    * This prevents the menu from reopening when a button is clicked
    */
-  public checkAndResetButtonClicked(): boolean {
+  public consumeButtonClickedFlag(): boolean {
     const result = this.justClickedButton;
     this.justClickedButton = false; // Reset the flag after checking
     return result;
