@@ -29,9 +29,11 @@ export class ContextMenu {
   private clickHandler: ((pointer: Phaser.Input.Pointer) => void) | null = null;
   private buttons: MenuButton[] = [];
   private hoverCount = 0; // Counter to track overlapping hover states
+  private justClickedButton: boolean; // Flag to prevent menu from reopening after button click
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
+    this.justClickedButton = false; // Explicitly initialize flag
   }
 
   /**
@@ -73,6 +75,7 @@ export class ContextMenu {
       BUTTON_HEIGHT,
       'Buildings',
       () => {
+        this.justClickedButton = true;
         onBuildingsClick();
         this.close();
       },
@@ -91,6 +94,7 @@ export class ContextMenu {
       BUTTON_HEIGHT,
       'Roads',
       () => {
+        this.justClickedButton = true;
         onRoadsClick();
         this.close();
       },
@@ -145,6 +149,9 @@ export class ContextMenu {
     // Reset hover count
     this.hoverCount = 0;
     
+    // Reset button clicked flag to ensure clean state
+    this.justClickedButton = false;
+    
     // Remove the click handler
     if (this.clickHandler) {
       this.scene.input.off('pointerup', this.clickHandler);
@@ -164,6 +171,25 @@ export class ContextMenu {
    */
   public isPointerOver(): boolean {
     return this.hoverCount > 0;
+  }
+
+  /**
+   * Consumes and resets the justClickedButton flag
+   * 
+   * This method checks if a menu button was just clicked and immediately resets 
+   * the flag to false. The "consume" pattern ensures the flag is only used once.
+   * 
+   * **Side Effect:** Modifies internal state by resetting justClickedButton to false
+   * 
+   * **Usage:** Called by GameScene's pointerup handler to determine if the menu
+   * should be reopened. If a button was clicked, returns true to prevent reopening.
+   * 
+   * @returns {boolean} true if a button was clicked, false otherwise
+   */
+  public consumeButtonClickedFlag(): boolean {
+    const result = this.justClickedButton;
+    this.justClickedButton = false; // Reset the flag after checking
+    return result;
   }
 
   /**
