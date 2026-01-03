@@ -29,6 +29,7 @@ export class ContextMenu {
   private clickHandler: ((pointer: Phaser.Input.Pointer) => void) | null = null;
   private buttons: MenuButton[] = [];
   private hoverCount = 0; // Counter to track overlapping hover states
+  private justClickedButton = false; // Flag to prevent menu from reopening after button click
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -73,6 +74,7 @@ export class ContextMenu {
       BUTTON_HEIGHT,
       'Buildings',
       () => {
+        this.justClickedButton = true;
         onBuildingsClick();
         this.close();
       },
@@ -91,6 +93,7 @@ export class ContextMenu {
       BUTTON_HEIGHT,
       'Roads',
       () => {
+        this.justClickedButton = true;
         onRoadsClick();
         this.close();
       },
@@ -164,6 +167,15 @@ export class ContextMenu {
    */
   public isPointerOver(): boolean {
     return this.hoverCount > 0;
+  }
+
+  /**
+   * Check if a button was just clicked (to prevent menu from reopening)
+   */
+  public wasButtonJustClicked(): boolean {
+    const result = this.justClickedButton;
+    this.justClickedButton = false; // Reset the flag after checking
+    return result;
   }
 
   /**

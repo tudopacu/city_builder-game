@@ -181,7 +181,8 @@ export class GameScene extends Phaser.Scene {
     this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
       // Only open menu if it was a left-click (not a drag) and pointer is not over the menu
       // Fix bug #3: Prevent menu from reopening when clicking on menu buttons
-      if (!this.isDragging && pointer.leftButtonReleased() && !this.contextMenu.isPointerOver()) {
+      // Fix bug #4: Check if a button was just clicked to prevent reopening
+      if (!this.isDragging && pointer.leftButtonReleased() && !this.contextMenu.isPointerOver() && !this.contextMenu.wasButtonJustClicked()) {
         this.contextMenu.open(
           pointer.x,
           pointer.y,
