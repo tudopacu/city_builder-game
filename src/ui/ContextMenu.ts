@@ -148,6 +148,9 @@ export class ContextMenu {
     // Reset hover count
     this.hoverCount = 0;
     
+    // Reset button clicked flag to ensure clean state
+    this.justClickedButton = false;
+    
     // Remove the click handler
     if (this.clickHandler) {
       this.scene.input.off('pointerup', this.clickHandler);
