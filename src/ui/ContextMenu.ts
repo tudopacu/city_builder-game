@@ -28,6 +28,7 @@ export class ContextMenu {
   private container: Phaser.GameObjects.Container | null = null;
   private clickHandler: ((pointer: Phaser.Input.Pointer) => void) | null = null;
   private buttons: MenuButton[] = [];
+  private isPointerOverMenu = false;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -48,6 +49,7 @@ export class ContextMenu {
     // Create container for menu
     this.container = this.scene.add.container(adjustedX, adjustedY);
     this.container.setDepth(MENU_Z_INDEX); // Ensure menu is on top
+    this.container.setScrollFactor(0); // Fix bug #1: Menu should not zoom/scroll with camera
 
     // Menu background with 80% transparency (alpha = 0.2 means 20% opaque)
     const menuBg = this.scene.add.rectangle(
@@ -97,6 +99,15 @@ export class ContextMenu {
     // Make menu interactive to prevent clicks from passing through
     menuBg.setInteractive();
 
+    // Track when pointer is over the menu (Fix bug #3)
+    menuBg.on('pointerover', () => {
+      this.isPointerOverMenu = true;
+    });
+
+    menuBg.on('pointerout', () => {
+      this.isPointerOverMenu = false;
+    });
+
     // Add click handler to close menu when clicking outside
     this.clickHandler = (pointer: Phaser.Input.Pointer) => {
       if (this.container && pointer.leftButtonReleased()) {
@@ -130,6 +141,9 @@ export class ContextMenu {
     // Clear button references (they're automatically destroyed with container)
     this.buttons = [];
     
+    // Reset pointer over menu flag
+    this.isPointerOverMenu = false;
+    
     // Remove the click handler
     if (this.clickHandler) {
       this.scene.input.off('pointerup', this.clickHandler);
@@ -142,6 +156,13 @@ export class ContextMenu {
    */
   public isOpen(): boolean {
     return this.container !== null;
+  }
+
+  /**
+   * Check if the pointer is currently over the menu
+   */
+  public isPointerOver(): boolean {
+    return this.isPointerOverMenu;
   }
 
   /**
