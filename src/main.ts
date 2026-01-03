@@ -55,6 +55,7 @@ export { ApiService } from './services/ApiService';
 declare global {
   interface Window {
     startCityBuilderGame: typeof startGame;
+    phaserGameInstance?: Phaser.Game;
   }
 }
 
@@ -71,6 +72,7 @@ declare global {
       backendUrl: 'http://localhost:5000/game',
     };
 
-    startGame(demoConfig);
+    const game = startGame(demoConfig);
+    window.phaserGameInstance = game; // Expose for debugging
   }
 })();

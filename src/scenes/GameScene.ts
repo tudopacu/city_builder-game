@@ -4,6 +4,7 @@ import {Player} from "../models/Player";
 import {Map} from "../models/Map";
 import { BuildingService } from '../services/BuildingService';
 import {PlayerBuilding} from "../models/PlayerBuilding";
+import { ContextMenu } from '../ui/ContextMenu';
 
 const TILE_WIDTH = 64;      // width of a tile in your PNG
 const TILE_HEIGHT = 64;     // height of a tile in your PNG
@@ -22,6 +23,9 @@ const HALF_H = CROP_H / 2;
 // Building rendering constants
 const BUILDING_LABEL_OFFSET_Y = 10; // Offset for building name label
 
+// Camera constants
+const DRAG_THRESHOLD_PIXELS = 5; // Minimum pixels moved to consider it a drag
+
 /**
  * Main game scene with isometric map rendering
  */
@@ -31,6 +35,8 @@ export class GameScene extends Phaser.Scene {
   private map: Map | null = null;
   private cameraDragStartX = 0;
   private cameraDragStartY = 0;
+  private isDragging = false;
+  private contextMenu!: ContextMenu; // Use definite assignment assertion
 
   constructor(player: Player, mapService: MapService) {
     super({ key: 'GameScene' });
@@ -48,7 +54,8 @@ export class GameScene extends Phaser.Scene {
 
 
   create() {
-
+    // Initialize context menu after scene is created
+    this.contextMenu = new ContextMenu(this);
 
     this.drawMap();
     this.loadPlayerBuildings();
@@ -150,6 +157,7 @@ export class GameScene extends Phaser.Scene {
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       this.cameraDragStartX = pointer.x;
       this.cameraDragStartY = pointer.y;
+      this.isDragging = false;
     });
 
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
@@ -157,12 +165,34 @@ export class GameScene extends Phaser.Scene {
         const deltaX = pointer.x - this.cameraDragStartX;
         const deltaY = pointer.y - this.cameraDragStartY;
 
+        // Consider it dragging if moved more than threshold
+        if (Math.abs(deltaX) > DRAG_THRESHOLD_PIXELS || Math.abs(deltaY) > DRAG_THRESHOLD_PIXELS) {
+          this.isDragging = true;
+        }
+
         this.cameras.main.scrollX -= deltaX;
         this.cameras.main.scrollY -= deltaY;
 
         this.cameraDragStartX = pointer.x;
         this.cameraDragStartY = pointer.y;
       }
+    });
+
+    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      // Only open menu if it was a left-click (not a drag)
+      if (!this.isDragging && pointer.leftButtonReleased()) {
+        this.contextMenu.open(
+          pointer.x,
+          pointer.y,
+          () => {
+            // TODO: Implement building placement functionality
+          },
+          () => {
+            // TODO: Implement road placement functionality
+          }
+        );
+      }
+      this.isDragging = false;
     });
 
     // Zoom with mouse wheel
