@@ -33,7 +33,9 @@ export class MenuButton {
     width: number,
     height: number,
     text: string,
-    onClick: () => void
+    onClick: () => void,
+    onHoverStart?: () => void,
+    onHoverEnd?: () => void
   ) {
     this.container = scene.add.container(x, y);
 
@@ -57,10 +59,16 @@ export class MenuButton {
     // Hover effects
     this.background.on('pointerover', () => {
       this.background.setFillStyle(BUTTON_COLORS.HOVER, BUTTON_ALPHA.HOVER);
+      if (onHoverStart) {
+        onHoverStart();
+      }
     });
 
     this.background.on('pointerout', () => {
       this.background.setFillStyle(BUTTON_COLORS.DEFAULT, BUTTON_ALPHA.DEFAULT);
+      if (onHoverEnd) {
+        onHoverEnd();
+      }
     });
 
     // Click handler

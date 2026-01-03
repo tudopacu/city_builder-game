@@ -28,6 +28,7 @@ export class ContextMenu {
   private container: Phaser.GameObjects.Container | null = null;
   private clickHandler: ((pointer: Phaser.Input.Pointer) => void) | null = null;
   private buttons: MenuButton[] = [];
+  private hoverCount = 0; // Counter to track overlapping hover states
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -48,6 +49,7 @@ export class ContextMenu {
     // Create container for menu
     this.container = this.scene.add.container(adjustedX, adjustedY);
     this.container.setDepth(MENU_Z_INDEX); // Ensure menu is on top
+    this.container.setScrollFactor(0); // Fix bug #1: Menu should not zoom/scroll with camera
 
     // Menu background with 80% transparency (alpha = 0.2 means 20% opaque)
     const menuBg = this.scene.add.rectangle(
@@ -73,7 +75,9 @@ export class ContextMenu {
       () => {
         onBuildingsClick();
         this.close();
-      }
+      },
+      () => this.incrementHoverCount(),
+      () => this.decrementHoverCount()
     );
     this.container.add(buildingsButton.getContainer());
     this.buttons.push(buildingsButton);
@@ -89,13 +93,21 @@ export class ContextMenu {
       () => {
         onRoadsClick();
         this.close();
-      }
+      },
+      () => this.incrementHoverCount(),
+      () => this.decrementHoverCount()
     );
     this.container.add(roadsButton.getContainer());
     this.buttons.push(roadsButton);
 
     // Make menu interactive to prevent clicks from passing through
     menuBg.setInteractive();
+
+    // Track when pointer is over the menu (Fix bug #3)
+    // We use a counter to handle overlapping hover states when moving
+    // between menu background and buttons
+    menuBg.on('pointerover', () => this.incrementHoverCount());
+    menuBg.on('pointerout', () => this.decrementHoverCount());
 
     // Add click handler to close menu when clicking outside
     this.clickHandler = (pointer: Phaser.Input.Pointer) => {
@@ -130,6 +142,9 @@ export class ContextMenu {
     // Clear button references (they're automatically destroyed with container)
     this.buttons = [];
     
+    // Reset hover count
+    this.hoverCount = 0;
+    
     // Remove the click handler
     if (this.clickHandler) {
       this.scene.input.off('pointerup', this.clickHandler);
@@ -142,6 +157,28 @@ export class ContextMenu {
    */
   public isOpen(): boolean {
     return this.container !== null;
+  }
+
+  /**
+   * Check if the pointer is currently over the menu
+   */
+  public isPointerOver(): boolean {
+    return this.hoverCount > 0;
+  }
+
+  /**
+   * Increment hover count when pointer enters a menu element
+   */
+  private incrementHoverCount(): void {
+    this.hoverCount++;
+  }
+
+  /**
+   * Decrement hover count when pointer leaves a menu element
+   * Prevents going negative to handle unbalanced events
+   */
+  private decrementHoverCount(): void {
+    this.hoverCount = Math.max(0, this.hoverCount - 1);
   }
 
   /**
