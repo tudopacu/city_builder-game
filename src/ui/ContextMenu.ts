@@ -127,8 +127,7 @@ export class ContextMenu {
       this.container = null;
     }
 
-    // Destroy all buttons
-    this.buttons.forEach(button => button.destroy());
+    // Clear button references (they're automatically destroyed with container)
     this.buttons = [];
     
     // Remove the click handler

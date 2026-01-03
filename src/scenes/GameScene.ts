@@ -36,13 +36,12 @@ export class GameScene extends Phaser.Scene {
   private cameraDragStartX = 0;
   private cameraDragStartY = 0;
   private isDragging = false;
-  private contextMenu: ContextMenu;
+  private contextMenu!: ContextMenu; // Use definite assignment assertion
 
   constructor(player: Player, mapService: MapService) {
     super({ key: 'GameScene' });
     this.player = player;
     this.mapService = mapService;
-    this.contextMenu = new ContextMenu(this);
   }
 
   preload() {
@@ -55,7 +54,8 @@ export class GameScene extends Phaser.Scene {
 
 
   create() {
-
+    // Initialize context menu after scene is created
+    this.contextMenu = new ContextMenu(this);
 
     this.drawMap();
     this.loadPlayerBuildings();
