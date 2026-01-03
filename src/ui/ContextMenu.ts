@@ -76,8 +76,8 @@ export class ContextMenu {
         onBuildingsClick();
         this.close();
       },
-      () => { this.hoverCount++; },  // onHoverStart
-      () => { this.hoverCount--; }   // onHoverEnd
+      () => this.incrementHoverCount(),
+      () => this.decrementHoverCount()
     );
     this.container.add(buildingsButton.getContainer());
     this.buttons.push(buildingsButton);
@@ -94,8 +94,8 @@ export class ContextMenu {
         onRoadsClick();
         this.close();
       },
-      () => { this.hoverCount++; },  // onHoverStart
-      () => { this.hoverCount--; }   // onHoverEnd
+      () => this.incrementHoverCount(),
+      () => this.decrementHoverCount()
     );
     this.container.add(roadsButton.getContainer());
     this.buttons.push(roadsButton);
@@ -106,13 +106,8 @@ export class ContextMenu {
     // Track when pointer is over the menu (Fix bug #3)
     // We use a counter to handle overlapping hover states when moving
     // between menu background and buttons
-    menuBg.on('pointerover', () => {
-      this.hoverCount++;
-    });
-
-    menuBg.on('pointerout', () => {
-      this.hoverCount--;
-    });
+    menuBg.on('pointerover', () => this.incrementHoverCount());
+    menuBg.on('pointerout', () => this.decrementHoverCount());
 
     // Add click handler to close menu when clicking outside
     this.clickHandler = (pointer: Phaser.Input.Pointer) => {
@@ -169,6 +164,21 @@ export class ContextMenu {
    */
   public isPointerOver(): boolean {
     return this.hoverCount > 0;
+  }
+
+  /**
+   * Increment hover count when pointer enters a menu element
+   */
+  private incrementHoverCount(): void {
+    this.hoverCount++;
+  }
+
+  /**
+   * Decrement hover count when pointer leaves a menu element
+   * Prevents going negative to handle unbalanced events
+   */
+  private decrementHoverCount(): void {
+    this.hoverCount = Math.max(0, this.hoverCount - 1);
   }
 
   /**
