@@ -33,6 +33,7 @@ export class ContextMenu {
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
+    this.justClickedButton = false; // Explicitly initialize flag
   }
 
   /**
@@ -174,8 +175,16 @@ export class ContextMenu {
 
   /**
    * Consumes and resets the justClickedButton flag
-   * Returns true if a button was just clicked, then immediately resets the flag to false
-   * This prevents the menu from reopening after a button click
+   * 
+   * This method checks if a menu button was just clicked and immediately resets 
+   * the flag to false. The "consume" pattern ensures the flag is only used once.
+   * 
+   * **Side Effect:** Modifies internal state by resetting justClickedButton to false
+   * 
+   * **Usage:** Called by GameScene's pointerup handler to determine if the menu
+   * should be reopened. If a button was clicked, returns true to prevent reopening.
+   * 
+   * @returns {boolean} true if a button was clicked, false otherwise
    */
   public consumeButtonClickedFlag(): boolean {
     const result = this.justClickedButton;
