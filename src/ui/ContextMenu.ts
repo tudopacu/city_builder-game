@@ -29,7 +29,7 @@ export class ContextMenu {
   private clickHandler: ((pointer: Phaser.Input.Pointer) => void) | null = null;
   private buttons: MenuButton[] = [];
   private hoverCount = 0; // Counter to track overlapping hover states
-  private justClickedButton = false; // Flag to prevent menu from reopening after button click
+  private justClickedButton: boolean; // Flag to prevent menu from reopening after button click
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
