@@ -28,7 +28,7 @@ export class ContextMenu {
   private container: Phaser.GameObjects.Container | null = null;
   private clickHandler: ((pointer: Phaser.Input.Pointer) => void) | null = null;
   private buttons: MenuButton[] = [];
-  private isPointerOverMenu = false;
+  private hoverCount = 0; // Counter to track overlapping hover states
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -76,8 +76,8 @@ export class ContextMenu {
         onBuildingsClick();
         this.close();
       },
-      () => { this.isPointerOverMenu = true; },  // onHoverStart
-      () => { this.isPointerOverMenu = false; }  // onHoverEnd
+      () => { this.hoverCount++; },  // onHoverStart
+      () => { this.hoverCount--; }   // onHoverEnd
     );
     this.container.add(buildingsButton.getContainer());
     this.buttons.push(buildingsButton);
@@ -94,8 +94,8 @@ export class ContextMenu {
         onRoadsClick();
         this.close();
       },
-      () => { this.isPointerOverMenu = true; },  // onHoverStart
-      () => { this.isPointerOverMenu = false; }  // onHoverEnd
+      () => { this.hoverCount++; },  // onHoverStart
+      () => { this.hoverCount--; }   // onHoverEnd
     );
     this.container.add(roadsButton.getContainer());
     this.buttons.push(roadsButton);
@@ -104,14 +104,14 @@ export class ContextMenu {
     menuBg.setInteractive();
 
     // Track when pointer is over the menu (Fix bug #3)
-    // We track both background and buttons to ensure the flag stays true
-    // when moving between them
+    // We use a counter to handle overlapping hover states when moving
+    // between menu background and buttons
     menuBg.on('pointerover', () => {
-      this.isPointerOverMenu = true;
+      this.hoverCount++;
     });
 
     menuBg.on('pointerout', () => {
-      this.isPointerOverMenu = false;
+      this.hoverCount--;
     });
 
     // Add click handler to close menu when clicking outside
@@ -147,8 +147,8 @@ export class ContextMenu {
     // Clear button references (they're automatically destroyed with container)
     this.buttons = [];
     
-    // Reset pointer over menu flag
-    this.isPointerOverMenu = false;
+    // Reset hover count
+    this.hoverCount = 0;
     
     // Remove the click handler
     if (this.clickHandler) {
@@ -168,7 +168,7 @@ export class ContextMenu {
    * Check if the pointer is currently over the menu
    */
   public isPointerOver(): boolean {
-    return this.isPointerOverMenu;
+    return this.hoverCount > 0;
   }
 
   /**
