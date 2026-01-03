@@ -75,7 +75,9 @@ export class ContextMenu {
       () => {
         onBuildingsClick();
         this.close();
-      }
+      },
+      () => { this.isPointerOverMenu = true; },  // onHoverStart
+      () => { this.isPointerOverMenu = false; }  // onHoverEnd
     );
     this.container.add(buildingsButton.getContainer());
     this.buttons.push(buildingsButton);
@@ -91,7 +93,9 @@ export class ContextMenu {
       () => {
         onRoadsClick();
         this.close();
-      }
+      },
+      () => { this.isPointerOverMenu = true; },  // onHoverStart
+      () => { this.isPointerOverMenu = false; }  // onHoverEnd
     );
     this.container.add(roadsButton.getContainer());
     this.buttons.push(roadsButton);
@@ -100,6 +104,8 @@ export class ContextMenu {
     menuBg.setInteractive();
 
     // Track when pointer is over the menu (Fix bug #3)
+    // We track both background and buttons to ensure the flag stays true
+    // when moving between them
     menuBg.on('pointerover', () => {
       this.isPointerOverMenu = true;
     });
