@@ -4,6 +4,8 @@ import {Player} from "../models/Player";
 import {Map} from "../models/Map";
 import { BuildingService } from '../services/BuildingService';
 import {PlayerBuilding} from "../models/PlayerBuilding";
+import Layer = Phaser.GameObjects.Layer;
+import Camera = Phaser.Cameras.Scene2D.Camera;
 
 const TILE_WIDTH = 64;      // width of a tile in your PNG
 const TILE_HEIGHT = 64;     // height of a tile in your PNG
@@ -22,15 +24,16 @@ const HALF_H = CROP_H / 2;
 // Building rendering constants
 const BUILDING_LABEL_OFFSET_Y = 10; // Offset for building name label
 
-/**
- * Main game scene with isometric map rendering
- */
 export class GameScene extends Phaser.Scene {
   private player: Player;
   private mapService: MapService;
   private map: Map | null = null;
   private cameraDragStartX = 0;
   private cameraDragStartY = 0;
+  private worldLayer!: Layer;
+  private hudLayer!: Layer;
+  private worldCamera!: Camera;
+  private hudCamera!: Camera;
 
   constructor(player: Player, mapService: MapService) {
     super({ key: 'GameScene' });
@@ -46,21 +49,27 @@ export class GameScene extends Phaser.Scene {
     this.load.image('casa', 'assets/casa.png');
   }
 
-
   create() {
+    this.worldLayer = this.add.layer();
+    this.hudLayer = this.add.layer();
 
+    this.worldCamera = this.cameras.main;
+    this.hudCamera = this.cameras.add(0, 0, this.scale.width, this.scale.height, false, 'HUDCamera');
 
     this.drawMap();
     this.loadPlayerBuildings();
 
-    // Display player info
-    this.add.text(10, 10, `Player: ${this.player.username}`, {
+    const text = this.add.text(10, 10, `Player: ${this.player.username}`, {
       fontSize: '16px',
       color: '#ffffff',
       backgroundColor: '#000000',
       padding: { x: 5, y: 5 },
     });
 
+    const hudBg = this.add.rectangle(0, 0, 60, 60, 0x000000, 0.6)
+        .setOrigin(0);
+
+    this.hudLayer.add([hudBg, text]);
 
     this.setupCameraControls();
   }
@@ -91,21 +100,17 @@ export class GameScene extends Phaser.Scene {
 
       img.setCrop(CROP_X, CROP_Y, CROP_W, CROP_H);
       img.setOrigin(0.5, 1);
+
+      this.worldLayer.add([img]);
     });
   }
 
-  /**
-   * Convert grid coordinates to isometric screen coordinates
-   */
   private toIsometricCoordinates(x: number, y: number): { isoX: number; isoY: number } {
     const isoX = (x - y) * HALF_W;
     const isoY = (x + y) * HALF_H / 2;
     return { isoX, isoY };
   }
 
-  /**
-   * Load and render player buildings on the map
-   */
   private async loadPlayerBuildings(): Promise<void> {
     const playerBuildings = await BuildingService.getPlayerBuildings();
 
@@ -118,10 +123,6 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  /**
-   * Render a single building on the map
-   * Takes into account the tile size and isometric coordinates
-   */
   private renderBuilding(playerBuilding: PlayerBuilding): void {
     // Calculate isometric position based on building coordinates
     const { isoX, isoY } = this.toIsometricCoordinates(playerBuilding.x, playerBuilding.y);
@@ -140,11 +141,10 @@ export class GameScene extends Phaser.Scene {
     });
     text.setOrigin(0.5, 1);
     text.setDepth(isoY + 1); // Ensure the label is above the building
+
+    this.worldLayer.add([buildingImage, text]);
   }
 
-  /**
-   * Setup camera controls for panning
-   */
   private setupCameraControls(): void {
     // Enable camera drag with mouse
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
@@ -157,8 +157,8 @@ export class GameScene extends Phaser.Scene {
         const deltaX = pointer.x - this.cameraDragStartX;
         const deltaY = pointer.y - this.cameraDragStartY;
 
-        this.cameras.main.scrollX -= deltaX;
-        this.cameras.main.scrollY -= deltaY;
+        this.worldCamera.scrollX -= deltaX;
+        this.worldCamera.scrollY -= deltaY;
 
         this.cameraDragStartX = pointer.x;
         this.cameraDragStartY = pointer.y;
@@ -168,9 +168,14 @@ export class GameScene extends Phaser.Scene {
     // Zoom with mouse wheel
     this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gameObjects: unknown, _deltaX: number, deltaY: number) => {
       const zoomDelta = deltaY > 0 ? -0.1 : 0.1;
-      const newZoom = Phaser.Math.Clamp(this.cameras.main.zoom + zoomDelta, 0.5, 2);
-      this.cameras.main.setZoom(newZoom);
+      const newZoom = Phaser.Math.Clamp(this.worldCamera.zoom + zoomDelta, 0.5, 2);
+      this.worldCamera.setZoom(newZoom);
     });
+
+    this.hudCamera.setScroll(0, 0);
+
+    this.worldCamera.ignore(this.hudLayer);
+    this.hudCamera.ignore(this.worldLayer);
   }
 
   update(): void {
