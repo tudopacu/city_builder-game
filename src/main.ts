@@ -60,7 +60,15 @@ declare global {
 
 (async () => {
   const token = new URLSearchParams(window.location.search).get('token');
-  const player: Player = await Player.getPlayer();
+  let player: Player;
+
+  try {
+    player = await Player.getPlayer();
+  } catch (error) {
+    console.warn('Failed to fetch player from backend, using demo player:', error);
+    // Fallback to demo player for development
+    player = new Player(123, 'DemoPlayer');
+  }
 
   window.startCityBuilderGame = startGame;
 
