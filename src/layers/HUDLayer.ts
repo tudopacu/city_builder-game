@@ -64,7 +64,6 @@ export class HUDLayer {
       buttonColor,
       buttonHoverColor,
       () => {
-        console.log('Build button clicked');
         this.onBuildClick();
       }
     );

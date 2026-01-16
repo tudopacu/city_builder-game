@@ -103,8 +103,6 @@ export class GameScene extends Phaser.Scene {
     // For building ID 1, assume it's a 1x1 building (can be fetched from backend in future)
     this.currentBuildingWidth = 1;
     this.currentBuildingHeight = 1;
-    
-    console.log('Building placement mode activated for building ID:', this.currentBuildingId);
   }
 
   private updateBuildingPreview(pointer: Phaser.Input.Pointer): void {
@@ -158,8 +156,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private async placeBuildingAtMouse(): Promise<void> {
+    // Update the preview one more time to ensure we have the latest state
+    this.updateBuildingPreview(this.input.activePointer);
+    
     if (!this.isValidPlacement || !this.buildingPreview) {
-      console.log('Invalid placement - cannot place building');
       return;
     }
     
@@ -182,10 +182,7 @@ export class GameScene extends Phaser.Scene {
     
     if (!success) {
       // Remove the building if backend rejected it
-      console.log('Backend rejected building placement - removing building');
       placedBuilding.destroy();
-    } else {
-      console.log('Building placed successfully at', tilePos.x, tilePos.y);
     }
     
     // Exit placement mode
@@ -234,7 +231,5 @@ export class GameScene extends Phaser.Scene {
       this.buildingOverlay.destroy();
       this.buildingOverlay = null;
     }
-    
-    console.log('Exited building placement mode');
   }
 }

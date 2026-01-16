@@ -101,7 +101,10 @@ export class WorldLayer {
   private async drawMap(): Promise<void> {
     this.map = (await this.mapService.fetchMap()) || null;
 
-    console.log("Map data loaded:", this.map);
+    // If no map data from backend, create a default map for testing
+    if (!this.map) {
+      this.map = this.createDefaultMap();
+    }
 
     const terrains = this.map?.terrains;
 
@@ -167,5 +170,29 @@ export class WorldLayer {
     text.setDepth(isoY + 1); // Ensure the label is above the building
 
     this.layer.add([buildingImage, text]);
+  }
+
+  private createDefaultMap(): Map {
+    // Create a 10x10 grass map for testing
+    const terrains = [];
+    for (let y = 0; y < 10; y++) {
+      for (let x = 0; x < 10; x++) {
+        terrains.push({
+          tile_id: y * 10 + x,
+          x: x,
+          y: y,
+          type: 'grass',
+          walkable: true,
+          set_x: 0,
+          set_y: 0,
+        });
+      }
+    }
+    return {
+      id: 1,
+      width: 10,
+      length: 10,
+      terrains: terrains,
+    };
   }
 }
