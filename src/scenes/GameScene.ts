@@ -23,6 +23,13 @@ export class GameScene extends Phaser.Scene {
   private currentBuildingHeight = 1;
   private isValidPlacement = false;
 
+  // Building overlay constants
+  private static readonly OVERLAY_OFFSET_Y = 16;
+  private static readonly OVERLAY_WIDTH = 48;
+  private static readonly OVERLAY_HEIGHT = 24;
+  private static readonly OVERLAY_ALPHA = 0.4;
+  private static readonly PREVIEW_ALPHA = 0.7;
+
   constructor(player: Player, mapService: MapService) {
     super({ key: 'GameScene' });
     this.player = player;
@@ -53,8 +60,13 @@ export class GameScene extends Phaser.Scene {
   private setupCameraControls(): void {
     // Enable camera drag with mouse
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (this.buildingPlacementMode && pointer.leftButtonDown()) {
-        this.placeBuildingAtMouse();
+      if (this.buildingPlacementMode) {
+        if (pointer.leftButtonDown()) {
+          this.placeBuildingAtMouse();
+        } else if (pointer.rightButtonDown()) {
+          // Right-click cancels building placement
+          this.exitBuildingPlacementMode();
+        }
         return;
       }
       
@@ -85,6 +97,13 @@ export class GameScene extends Phaser.Scene {
       const zoomDelta = deltaY > 0 ? -0.1 : 0.1;
       const newZoom = Phaser.Math.Clamp(this.worldCamera.zoom + zoomDelta, 0.5, 2);
       this.worldCamera.setZoom(newZoom);
+    });
+
+    // ESC key to cancel building placement
+    this.input.keyboard?.on('keydown-ESC', () => {
+      if (this.buildingPlacementMode) {
+        this.exitBuildingPlacementMode();
+      }
     });
 
     this.hudCamera.setScroll(0, 0);
@@ -119,7 +138,7 @@ export class GameScene extends Phaser.Scene {
     if (!this.buildingPreview) {
       this.buildingPreview = this.add.image(isoCoords.isoX, isoCoords.isoY, 'casa');
       this.buildingPreview.setOrigin(0.5, 1);
-      this.buildingPreview.setAlpha(0.7);
+      this.buildingPreview.setAlpha(GameScene.PREVIEW_ALPHA);
       this.buildingPreview.setDepth(10000); // High depth to always be on top
       this.worldLayer.getLayer().add(this.buildingPreview);
     } else {
@@ -139,19 +158,19 @@ export class GameScene extends Phaser.Scene {
       const overlayColor = this.isValidPlacement ? 0x00ff00 : 0xff0000;
       this.buildingOverlay = this.add.rectangle(
         isoCoords.isoX, 
-        isoCoords.isoY - 16, 
-        48, 
-        24, 
+        isoCoords.isoY - GameScene.OVERLAY_OFFSET_Y, 
+        GameScene.OVERLAY_WIDTH, 
+        GameScene.OVERLAY_HEIGHT, 
         overlayColor, 
-        0.4
+        GameScene.OVERLAY_ALPHA
       );
       this.buildingOverlay.setOrigin(0.5, 0.5);
       this.buildingOverlay.setDepth(9999); // Just below building preview
       this.worldLayer.getLayer().add(this.buildingOverlay);
     } else {
       const overlayColor = this.isValidPlacement ? 0x00ff00 : 0xff0000;
-      this.buildingOverlay.setPosition(isoCoords.isoX, isoCoords.isoY - 16);
-      this.buildingOverlay.setFillStyle(overlayColor, 0.4);
+      this.buildingOverlay.setPosition(isoCoords.isoX, isoCoords.isoY - GameScene.OVERLAY_OFFSET_Y);
+      this.buildingOverlay.setFillStyle(overlayColor, GameScene.OVERLAY_ALPHA);
     }
   }
 
