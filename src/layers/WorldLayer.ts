@@ -37,6 +37,50 @@ export class WorldLayer {
     return this.layer;
   }
 
+  public getMapId(): number {
+    return this.map?.id || 1;
+  }
+
+  public worldToTile(worldX: number, worldY: number): { x: number; y: number } {
+    // Inverse isometric transformation
+    const tileX = Math.floor((worldX / HALF_W + worldY / (HALF_H / 2)) / 2);
+    const tileY = Math.floor((worldY / (HALF_H / 2) - worldX / HALF_W) / 2);
+    return { x: tileX, y: tileY };
+  }
+
+  public tileToIsometric(x: number, y: number): { isoX: number; isoY: number } {
+    return this.toIsometricCoordinates(x, y);
+  }
+
+  public areTilesValid(startX: number, startY: number, width: number, height: number): boolean {
+    if (!this.map || !this.map.terrains) {
+      return false;
+    }
+
+    // Check all tiles that the building would occupy
+    for (let dx = 0; dx < width; dx++) {
+      for (let dy = 0; dy < height; dy++) {
+        const tileX = startX + dx;
+        const tileY = startY + dy;
+        
+        // Find the tile at this position
+        const tile = this.map.terrains.find(t => t.x === tileX && t.y === tileY);
+        
+        if (!tile) {
+          // Tile doesn't exist (out of bounds)
+          return false;
+        }
+        
+        // Check if tile type is grass or dirt
+        if (tile.type !== 'grass' && tile.type !== 'dirt') {
+          return false;
+        }
+      }
+    }
+    
+    return true;
+  }
+
   public preload(): void {
     this.scene.load.spritesheet(TILE_SET_KEY, "assets/grass_and_water.png", {
       frameWidth: TILE_WIDTH,

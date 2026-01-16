@@ -6,10 +6,12 @@ export class HUDLayer {
   private scene: Phaser.Scene;
   private player: Player;
   private layer!: Layer;
+  private onBuildClick: () => void;
 
-  constructor(scene: Phaser.Scene, player: Player) {
+  constructor(scene: Phaser.Scene, player: Player, onBuildClick: () => void) {
     this.scene = scene;
     this.player = player;
+    this.onBuildClick = onBuildClick;
   }
 
   public getLayer(): Layer {
@@ -63,7 +65,7 @@ export class HUDLayer {
       buttonHoverColor,
       () => {
         console.log('Build button clicked');
-        // TODO: Implement build menu
+        this.onBuildClick();
       }
     );
 
