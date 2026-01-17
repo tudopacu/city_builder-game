@@ -16,6 +16,7 @@ export class GameScene extends Phaser.Scene {
   private worldCamera!: Camera;
   private hudCamera!: Camera;
   private buildingPlacementMode = false;
+  private buildingPlacementReady = false; // True after first click in placement mode
   private buildingPreview: Phaser.GameObjects.Image | null = null;
   private buildingOverlay: Phaser.GameObjects.Rectangle | null = null;
   private currentBuildingId = 1;
@@ -62,6 +63,17 @@ export class GameScene extends Phaser.Scene {
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (this.buildingPlacementMode) {
         if (pointer.leftButtonDown()) {
+          // Only start counting clicks after preview is created (on first mouse move)
+          if (!this.buildingPreview) {
+            return;
+          }
+          
+          // First click: just mark as ready for placement
+          if (!this.buildingPlacementReady) {
+            this.buildingPlacementReady = true;
+            return;
+          }
+          // Second click: actually place the building
           this.placeBuildingAtMouse();
         } else if (pointer.rightButtonDown()) {
           // Right-click cancels building placement
@@ -118,6 +130,7 @@ export class GameScene extends Phaser.Scene {
 
   private startBuildingPlacement(): void {
     this.buildingPlacementMode = true;
+    this.buildingPlacementReady = false; // Reset ready flag when starting new placement
     this.currentBuildingId = 1;
     // For building ID 1, assume it's a 1x1 building (can be fetched from backend in future)
     this.currentBuildingWidth = 1;
@@ -239,6 +252,7 @@ export class GameScene extends Phaser.Scene {
 
   private exitBuildingPlacementMode(): void {
     this.buildingPlacementMode = false;
+    this.buildingPlacementReady = false; // Reset ready flag when exiting
     
     // Clean up preview and overlay
     if (this.buildingPreview) {
