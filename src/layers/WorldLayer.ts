@@ -94,18 +94,23 @@ export class WorldLayer {
   private checkBuildingOverlap(startX: number, startY: number, width: number, height: number): boolean {
     // Check if any tile of the new building overlaps with existing buildings
     for (const existingBuilding of this.playerBuildings) {
-      const existingWidth = existingBuilding.building.width;
-      const existingHeight = existingBuilding.building.length;
       const existingX = existingBuilding.x;
       const existingY = existingBuilding.y;
+      const existingWidth = existingBuilding.building.width;
+      const existingHeight = existingBuilding.building.length;
       
-      // Check if the rectangles overlap
-      // Two rectangles overlap if they intersect in both X and Y dimensions
-      const overlapX = startX < existingX + existingWidth && startX + width > existingX;
-      const overlapY = startY < existingY + existingHeight && startY + height > existingY;
-      
-      if (overlapX && overlapY) {
-        return true; // Overlap detected
+      // Check each tile of the new building to see if it overlaps with the existing building
+      for (let dx = 0; dx < width; dx++) {
+        for (let dy = 0; dy < height; dy++) {
+          const newTileX = startX + dx;
+          const newTileY = startY + dy;
+          
+          // Check if this tile is within the existing building's area
+          if (newTileX >= existingX && newTileX < existingX + existingWidth &&
+              newTileY >= existingY && newTileY < existingY + existingHeight) {
+            return true; // Tile overlap detected
+          }
+        }
       }
     }
     
