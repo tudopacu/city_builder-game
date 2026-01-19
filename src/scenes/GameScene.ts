@@ -215,6 +215,25 @@ export class GameScene extends Phaser.Scene {
     if (!success) {
       // Remove the building if backend rejected it
       placedBuilding.destroy();
+    } else {
+      // Add the building to the WorldLayer's playerBuildings list
+      // This prevents overlap checking from allowing placement on the same spot
+      const newPlayerBuilding = {
+        id: Date.now(), // Temporary ID
+        building: {
+          id: this.currentBuildingId,
+          name: 'Building',
+          image_url: '',
+          description: '',
+          width: this.currentBuildingWidth,
+          length: this.currentBuildingHeight,
+          building_category: '',
+        },
+        level: 1,
+        x: tilePos.x,
+        y: tilePos.y,
+      };
+      this.worldLayer.addPlayerBuilding(newPlayerBuilding);
     }
     
     // Exit placement mode

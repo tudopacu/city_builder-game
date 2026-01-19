@@ -27,6 +27,7 @@ export class WorldLayer {
   private mapService: MapService;
   private map: Map | null = null;
   private layer!: Layer;
+  private playerBuildings: PlayerBuilding[] = [];
 
   constructor(scene: Phaser.Scene, mapService: MapService) {
     this.scene = scene;
@@ -50,6 +51,10 @@ export class WorldLayer {
 
   public tileToIsometric(x: number, y: number): { isoX: number; isoY: number } {
     return this.toIsometricCoordinates(x, y);
+  }
+
+  public addPlayerBuilding(playerBuilding: PlayerBuilding): void {
+    this.playerBuildings.push(playerBuilding);
   }
 
   public areTilesValid(startX: number, startY: number, width: number, height: number): boolean {
@@ -78,7 +83,33 @@ export class WorldLayer {
       }
     }
     
+    // Check if the building overlaps with any existing buildings
+    if (this.checkBuildingOverlap(startX, startY, width, height)) {
+      return false;
+    }
+    
     return true;
+  }
+
+  private checkBuildingOverlap(startX: number, startY: number, width: number, height: number): boolean {
+    // Check if any tile of the new building overlaps with existing buildings
+    for (const existingBuilding of this.playerBuildings) {
+      const existingWidth = existingBuilding.building.width;
+      const existingHeight = existingBuilding.building.length;
+      const existingX = existingBuilding.x;
+      const existingY = existingBuilding.y;
+      
+      // Check if the rectangles overlap
+      // Two rectangles overlap if they intersect in both X and Y dimensions
+      const overlapX = startX < existingX + existingWidth && startX + width > existingX;
+      const overlapY = startY < existingY + existingHeight && startY + height > existingY;
+      
+      if (overlapX && overlapY) {
+        return true; // Overlap detected
+      }
+    }
+    
+    return false; // No overlap
   }
 
   public preload(): void {
@@ -139,13 +170,13 @@ export class WorldLayer {
   }
 
   private async loadPlayerBuildings(): Promise<void> {
-    const playerBuildings = await BuildingService.getPlayerBuildings();
+    this.playerBuildings = await BuildingService.getPlayerBuildings();
 
-    if (playerBuildings.length === 0) {
+    if (this.playerBuildings.length === 0) {
       return;
     }
 
-    playerBuildings.forEach(playerBuilding => {
+    this.playerBuildings.forEach(playerBuilding => {
       this.renderBuilding(playerBuilding);
     });
   }
