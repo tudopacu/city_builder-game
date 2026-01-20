@@ -27,6 +27,7 @@ export class WorldLayer {
   private mapService: MapService;
   private map: Map | null = null;
   private layer!: Layer;
+  private playerBuildings: PlayerBuilding[] = [];
 
   constructor(scene: Phaser.Scene, mapService: MapService) {
     this.scene = scene;
@@ -35,6 +36,85 @@ export class WorldLayer {
 
   public getLayer(): Layer {
     return this.layer;
+  }
+
+  public getMapId(): number {
+    return this.map?.id || 1;
+  }
+
+  public worldToTile(worldX: number, worldY: number): { x: number; y: number } {
+    // Inverse isometric transformation
+    const tileX = Math.floor((worldX / HALF_W + worldY / (HALF_H / 2)) / 2);
+    const tileY = Math.floor((worldY / (HALF_H / 2) - worldX / HALF_W) / 2);
+    return { x: tileX, y: tileY };
+  }
+
+  public tileToIsometric(x: number, y: number): { isoX: number; isoY: number } {
+    return this.toIsometricCoordinates(x, y);
+  }
+
+  public addPlayerBuilding(playerBuilding: PlayerBuilding): void {
+    this.playerBuildings.push(playerBuilding);
+  }
+
+  public areTilesValid(startX: number, startY: number, width: number, height: number): boolean {
+    if (!this.map || !this.map.terrains) {
+      return false;
+    }
+
+    // Check all tiles that the building would occupy
+    for (let dx = 0; dx < width; dx++) {
+      for (let dy = 0; dy < height; dy++) {
+        const tileX = startX + dx;
+        const tileY = startY + dy;
+        
+        // Find the tile at this position
+        const tile = this.map.terrains.find(t => t.x === tileX && t.y === tileY);
+        
+        if (!tile) {
+          // Tile doesn't exist (out of bounds)
+          return false;
+        }
+        
+        // Check if tile type is grass or dirt
+        if (tile.type !== 'grass' && tile.type !== 'dirt') {
+          return false;
+        }
+      }
+    }
+    
+    // Check if the building overlaps with any existing buildings
+    if (this.checkBuildingOverlap(startX, startY, width, height)) {
+      return false;
+    }
+    
+    return true;
+  }
+
+  private checkBuildingOverlap(startX: number, startY: number, width: number, height: number): boolean {
+    // Check if any tile of the new building overlaps with existing buildings
+    for (const existingBuilding of this.playerBuildings) {
+      const existingX = existingBuilding.x;
+      const existingY = existingBuilding.y;
+      const existingWidth = existingBuilding.building.width;
+      const existingHeight = existingBuilding.building.length;
+      
+      // Check each tile of the new building to see if it overlaps with the existing building
+      for (let dx = 0; dx < width; dx++) {
+        for (let dy = 0; dy < height; dy++) {
+          const newTileX = startX + dx;
+          const newTileY = startY + dy;
+          
+          // Check if this tile is within the existing building's area
+          if (newTileX >= existingX && newTileX < existingX + existingWidth &&
+              newTileY >= existingY && newTileY < existingY + existingHeight) {
+            return true; // Tile overlap detected
+          }
+        }
+      }
+    }
+    
+    return false; // No overlap
   }
 
   public preload(): void {
@@ -57,7 +137,10 @@ export class WorldLayer {
   private async drawMap(): Promise<void> {
     this.map = (await this.mapService.fetchMap()) || null;
 
-    console.log("Map data loaded:", this.map);
+    // If no map data from backend, create a default map for testing
+    if (!this.map) {
+      this.map = this.createDefaultMap();
+    }
 
     const terrains = this.map?.terrains;
 
@@ -92,13 +175,13 @@ export class WorldLayer {
   }
 
   private async loadPlayerBuildings(): Promise<void> {
-    const playerBuildings = await BuildingService.getPlayerBuildings();
+    this.playerBuildings = await BuildingService.getPlayerBuildings();
 
-    if (playerBuildings.length === 0) {
+    if (this.playerBuildings.length === 0) {
       return;
     }
 
-    playerBuildings.forEach(playerBuilding => {
+    this.playerBuildings.forEach(playerBuilding => {
       this.renderBuilding(playerBuilding);
     });
   }
@@ -123,5 +206,29 @@ export class WorldLayer {
     text.setDepth(isoY + 1); // Ensure the label is above the building
 
     this.layer.add([buildingImage, text]);
+  }
+
+  private createDefaultMap(): Map {
+    // Create a 10x10 grass map for testing
+    const terrains = [];
+    for (let y = 0; y < 10; y++) {
+      for (let x = 0; x < 10; x++) {
+        terrains.push({
+          tile_id: y * 10 + x,
+          x: x,
+          y: y,
+          type: 'grass',
+          walkable: true,
+          set_x: 0,
+          set_y: 0,
+        });
+      }
+    }
+    return {
+      id: 1,
+      width: 10,
+      length: 10,
+      terrains: terrains,
+    };
   }
 }
