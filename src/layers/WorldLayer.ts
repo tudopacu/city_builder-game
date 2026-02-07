@@ -175,6 +175,10 @@ export class WorldLayer {
   }
 
   private async loadPlayerBuildings(): Promise<void> {
+    // First, fetch available buildings
+    await BuildingService.getBuildings();
+    
+    // Then, fetch player buildings
     this.playerBuildings = await BuildingService.getPlayerBuildings();
 
     if (this.playerBuildings.length === 0) {
