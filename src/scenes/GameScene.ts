@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { MapService } from '../services/MapService';
 import { Player } from "../models/Player";
+import { BuildingData } from '../dto/getBuildingsResponse';
 import { WorldLayer } from '../layers/WorldLayer';
 import { HUDLayer } from '../layers/HUDLayer';
 import { CONFIG } from '../configuration';
@@ -128,13 +129,12 @@ export class GameScene extends Phaser.Scene {
     // Game update loop
   }
 
-  private startBuildingPlacement(): void {
+  private startBuildingPlacement(building: BuildingData): void {
     this.buildingPlacementMode = true;
     this.buildingPlacementReady = false; // Reset ready flag when starting new placement
-    this.currentBuildingId = 1;
-    // For building ID 1, assume it's a 1x1 building (can be fetched from backend in future)
-    this.currentBuildingWidth = 1;
-    this.currentBuildingHeight = 1;
+    this.currentBuildingId = building.id;
+    this.currentBuildingWidth = building.width;
+    this.currentBuildingHeight = building.length;
   }
 
   private updateBuildingPreview(pointer: Phaser.Input.Pointer): void {
