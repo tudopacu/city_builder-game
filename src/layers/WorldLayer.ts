@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { MapService } from '../services/MapService';
 import { BuildingService } from '../services/BuildingService';
+import { PlayerBuildingService } from '../services/PlayerBuildingService';
 import { Map } from '../models/Map';
 import { PlayerBuilding } from '../models/PlayerBuilding';
 import Layer = Phaser.GameObjects.Layer;
@@ -25,13 +26,14 @@ const BUILDING_LABEL_OFFSET_Y = 10; // Offset for building name label
 export class WorldLayer {
   private scene: Phaser.Scene;
   private mapService: MapService;
+  private playerBuildingService: PlayerBuildingService;
   private map: Map | null = null;
   private layer!: Layer;
-  private playerBuildings: PlayerBuilding[] = [];
 
-  constructor(scene: Phaser.Scene, mapService: MapService) {
+  constructor(scene: Phaser.Scene, mapService: MapService, playerBuildingService: PlayerBuildingService) {
     this.scene = scene;
     this.mapService = mapService;
+    this.playerBuildingService = playerBuildingService;
   }
 
   public getLayer(): Layer {
@@ -51,10 +53,6 @@ export class WorldLayer {
 
   public tileToIsometric(x: number, y: number): { isoX: number; isoY: number } {
     return this.toIsometricCoordinates(x, y);
-  }
-
-  public addPlayerBuilding(playerBuilding: PlayerBuilding): void {
-    this.playerBuildings.push(playerBuilding);
   }
 
   public areTilesValid(startX: number, startY: number, width: number, height: number): boolean {
@@ -93,7 +91,7 @@ export class WorldLayer {
 
   private checkBuildingOverlap(startX: number, startY: number, width: number, height: number): boolean {
     // Check if any tile of the new building overlaps with existing buildings
-    for (const existingBuilding of this.playerBuildings) {
+    for (const existingBuilding of this.playerBuildingService.getPlayerBuildings()) {
       const existingX = existingBuilding.x;
       const existingY = existingBuilding.y;
       const existingWidth = existingBuilding.building.width;
@@ -179,13 +177,14 @@ export class WorldLayer {
     await BuildingService.getBuildings();
     
     // Then, fetch player buildings
-    this.playerBuildings = await BuildingService.getPlayerBuildings();
+    const playerBuildings = await BuildingService.getPlayerBuildings();
+    this.playerBuildingService.setPlayerBuildings(playerBuildings);
 
-    if (this.playerBuildings.length === 0) {
+    if (playerBuildings.length === 0) {
       return;
     }
 
-    this.playerBuildings.forEach(playerBuilding => {
+    playerBuildings.forEach(playerBuilding => {
       this.renderBuilding(playerBuilding);
     });
   }

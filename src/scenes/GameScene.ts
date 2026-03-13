@@ -1,15 +1,16 @@
 import Phaser from 'phaser';
 import { MapService } from '../services/MapService';
+import { PlayerBuildingService } from '../services/PlayerBuildingService';
 import { Player } from "../models/Player";
 import { BuildingData } from '../dto/getBuildingsResponse';
 import { WorldLayer } from '../layers/WorldLayer';
 import { HUDLayer } from '../layers/HUDLayer';
-import { CONFIG } from '../configuration';
 import Camera = Phaser.Cameras.Scene2D.Camera;
 
 export class GameScene extends Phaser.Scene {
   private player: Player;
   private mapService: MapService;
+  private playerBuildingService: PlayerBuildingService;
   private cameraDragStartX = 0;
   private cameraDragStartY = 0;
   private worldLayer!: WorldLayer;
@@ -36,10 +37,11 @@ export class GameScene extends Phaser.Scene {
     super({ key: 'GameScene' });
     this.player = player;
     this.mapService = mapService;
+    this.playerBuildingService = new PlayerBuildingService();
   }
 
   preload() {
-    this.worldLayer = new WorldLayer(this, this.mapService);
+    this.worldLayer = new WorldLayer(this, this.mapService, this.playerBuildingService);
     this.worldLayer.preload();
   }
 
@@ -209,14 +211,21 @@ export class GameScene extends Phaser.Scene {
     placedBuilding.setDepth(isoCoords.isoY);
     this.worldLayer.getLayer().add(placedBuilding);
     
-    // Send POST request to backend
-    const success = await this.sendBuildingToBackend(tilePos.x, tilePos.y);
+    // Send POST request to backend via service
+    const mapId = this.worldLayer.getMapId();
+    const success = await this.playerBuildingService.addBuilding(
+      this.player.id,
+      mapId,
+      this.currentBuildingId,
+      tilePos.x,
+      tilePos.y,
+    );
     
     if (!success) {
       // Remove the building if backend rejected it
       placedBuilding.destroy();
     } else {
-      // Add the building to the WorldLayer's playerBuildings list
+      // Add the building to the service's playerBuildings list
       // This prevents overlap checking from allowing placement on the same spot
       const newPlayerBuilding = {
         id: Date.now(), // Temporary ID
@@ -233,40 +242,11 @@ export class GameScene extends Phaser.Scene {
         x: tilePos.x,
         y: tilePos.y,
       };
-      this.worldLayer.addPlayerBuilding(newPlayerBuilding);
+      this.playerBuildingService.addPlayerBuilding(newPlayerBuilding);
     }
     
     // Exit placement mode
     this.exitBuildingPlacementMode();
-  }
-
-  private async sendBuildingToBackend(x: number, y: number): Promise<boolean> {
-    try {
-      const mapId = this.worldLayer.getMapId();
-      const response = await fetch(`${this.getBackendUrl()}/game/add_building`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          player_id: this.player.id,
-          map_id: mapId,
-          building_id: this.currentBuildingId,
-          x: x,
-          y: y,
-        }),
-      });
-      
-      return response.ok;
-    } catch (error) {
-      console.error('Error sending building to backend:', error);
-      return false;
-    }
-  }
-
-  private getBackendUrl(): string {
-    return CONFIG.backendUrl;
   }
 
   private exitBuildingPlacementMode(): void {
