@@ -2,7 +2,6 @@ import Phaser from 'phaser';
 import { GameScene } from './scenes/GameScene';
 import { GameConfig } from './types';
 import {Player} from "./models/Player";
-import {MapService} from "./services/MapService";
 
 /**
  * Initialize and start the city builder game
@@ -15,11 +14,8 @@ export function startGame(config: GameConfig): Phaser.Game {
   console.log(`Player: ${player.username} (ID: ${player.id})`);
   console.log(`Backend URL: ${backendUrl}`);
 
-  // Initialize API service with authentication cookie
-  const mapService = new MapService();
-
   // Create game scene
-  const gameScene = new GameScene(player, mapService);
+  const gameScene = new GameScene(player);
 
   // Phaser game configuration
   const phaserConfig: Phaser.Types.Core.GameConfig = {
