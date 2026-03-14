@@ -29,7 +29,9 @@ export class PlayerBuildingsService {
     private OVERLAY_ALPHA = 0.4;
     private PREVIEW_ALPHA = 0.7;
 
-    private readonly map: Map | null = null;
+    private get map(): Map | null {
+        return this.worldLayer.mapService?.getMap() || null;
+    }
 
     //add constructor that receives the scene, layer and onBuildingSelect callback
     constructor(
@@ -39,7 +41,6 @@ export class PlayerBuildingsService {
         private worldLayer: WorldLayer,
         private worldCamera: Camera
     ) {
-        this.map = worldLayer.mapService?.getMap() || null;
     }
 
     async showBuildingList(): Promise<void> {
@@ -358,9 +359,6 @@ export class PlayerBuildingsService {
     }
 
     public areTilesValid(startX: number, startY: number, width: number, height: number): boolean {
-
-        debugger;
-
         if (!this.map || !this.map.terrains) {
             return false;
         }
