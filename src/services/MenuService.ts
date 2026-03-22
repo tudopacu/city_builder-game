@@ -1,21 +1,12 @@
 import Phaser from "phaser";
-import {PlayerBuildingsService} from "./PlayerBuildingsService";
-import {Player} from "../models/Player";
-import {WorldLayer} from "../layers/WorldLayer";
-import Camera = Phaser.Cameras.Scene2D.Camera;
+import {HUDLayer} from "../layers/HUDLayer";
 
 export class MenuService {
 
-         public playerBuildingsService: PlayerBuildingsService;
-
         constructor(
             private scene: Phaser.Scene,
-            private layer: Phaser.GameObjects.Layer,
-            private player: Player,
-            private worldLayer: WorldLayer,
-            private worldCamera: Camera
+            private hudLayer: HUDLayer,
         ) {
-            this.playerBuildingsService = new PlayerBuildingsService(this.scene, this.layer, this.player, this.worldLayer, this.worldCamera);
         }
 
     public createMenu(): void {
@@ -40,7 +31,7 @@ export class MenuService {
             buttonColor,
             buttonHoverColor,
             () => {
-                this.playerBuildingsService.showBuildingList();
+                this.scene.events.emit('buildButtonClicked');
             }
         );
 
@@ -60,7 +51,7 @@ export class MenuService {
             }
         );
 
-        this.layer.add([...buildButton, ...worldMapButton]);
+        this.hudLayer.getLayer().add([...buildButton, ...worldMapButton]);
     }
 
     private createButton(

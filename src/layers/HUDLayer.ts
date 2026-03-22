@@ -2,8 +2,6 @@ import Phaser from 'phaser';
 import { Player } from '../models/Player';
 import {MenuService} from "../services/MenuService";
 import Layer = Phaser.GameObjects.Layer;
-import {WorldLayer} from "./WorldLayer";
-import Camera = Phaser.Cameras.Scene2D.Camera;
 
 export class HUDLayer {
   private layer!: Layer;
@@ -12,8 +10,6 @@ export class HUDLayer {
   constructor(
       private scene: Phaser.Scene,
       private player: Player,
-      private worldLayer: WorldLayer,
-      private worldCamera: Camera
   ) {}
 
   public getLayer(): Layer {
@@ -22,7 +18,7 @@ export class HUDLayer {
 
   public create(): void {
     this.layer = this.scene.add.layer();
-    this.menuService = new MenuService(this.scene, this.layer, this.player, this.worldLayer, this.worldCamera);
+    this.menuService = new MenuService(this.scene, this);
     this.menuService.createMenu();
     this.createPlayerInfo();
   }

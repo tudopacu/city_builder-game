@@ -3,6 +3,7 @@ import { Player } from "../models/Player";
 import { WorldLayer } from '../layers/WorldLayer';
 import { HUDLayer } from '../layers/HUDLayer';
 import Camera = Phaser.Cameras.Scene2D.Camera;
+import {PlayerBuildingsService} from "../services/PlayerBuildingsService";
 
 
 export class GameScene extends Phaser.Scene {
@@ -13,10 +14,12 @@ export class GameScene extends Phaser.Scene {
   private hudLayer!: HUDLayer;
   private worldCamera!: Camera;
   private hudCamera!: Camera;
+  public playerBuildingsService: PlayerBuildingsService;
 
   constructor(player: Player) {
     super({ key: 'GameScene' });
     this.player = player;
+    this.playerBuildingsService = null as unknown as PlayerBuildingsService;
   }
 
   preload() {
@@ -27,7 +30,7 @@ export class GameScene extends Phaser.Scene {
   create() {
     this.worldLayer.create();
     this.worldCamera = this.cameras.main;
-    this.hudLayer = new HUDLayer(this, this.player, this.worldLayer, this.worldCamera);
+    this.hudLayer = new HUDLayer(this, this.player);
     this.hudLayer.create();
 
     this.hudCamera = this.cameras.add(0, 0, this.scale.width, this.scale.height, false, 'HUDCamera');
@@ -35,26 +38,18 @@ export class GameScene extends Phaser.Scene {
     this.worldLayer.initialize();
 
     this.setupCameraControls();
+
+    this.playerBuildingsService = new PlayerBuildingsService(this, this.hudLayer, this.player, this.worldLayer, this.worldCamera);
   }
 
   private setupCameraControls(): void {
     // Enable camera drag with mouse
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (this.hudLayer.menuService?.playerBuildingsService?.buildingPlacementMode) {
-        this.hudLayer.menuService.playerBuildingsService.placeBuilding(pointer, this.input);
-        return;
-      }
-      
       this.cameraDragStartX = pointer.x;
       this.cameraDragStartY = pointer.y;
     });
 
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      if (this.hudLayer.menuService?.playerBuildingsService?.buildingPlacementMode) {
-        this.hudLayer.menuService.playerBuildingsService.updateBuildingPreview(pointer);
-        return;
-      }
-      
       if (pointer.isDown) {
         const deltaX = pointer.x - this.cameraDragStartX;
         const deltaY = pointer.y - this.cameraDragStartY;
@@ -72,13 +67,6 @@ export class GameScene extends Phaser.Scene {
       const zoomDelta = deltaY > 0 ? -0.1 : 0.1;
       const newZoom = Phaser.Math.Clamp(this.worldCamera.zoom + zoomDelta, 0.5, 2);
       this.worldCamera.setZoom(newZoom);
-    });
-
-    // ESC key to cancel building placement
-    this.input.keyboard?.on('keydown-ESC', () => {
-      if (this.hudLayer.menuService?.playerBuildingsService?.buildingPlacementMode) {
-        this.hudLayer.menuService.playerBuildingsService.exitBuildingPlacementMode();
-      }
     });
 
     this.hudCamera.setScroll(0, 0);

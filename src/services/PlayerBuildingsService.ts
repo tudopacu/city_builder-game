@@ -3,12 +3,12 @@ import {BuildingService} from "./BuildingService";
 import Phaser from "phaser";
 import {CONFIG} from "../configuration";
 import {IsometricService} from "./IsometricService";
-import {PlayerBuilding} from "../models/PlayerBuilding";
 import {Player} from "../models/Player";
 import {HALF_H, HALF_W} from "../constants/constants";
 import {Map} from "../models/Map";
 import {WorldLayer} from "../layers/WorldLayer";
 import Camera = Phaser.Cameras.Scene2D.Camera;
+import {HUDLayer} from "../layers/HUDLayer";
 
 export class PlayerBuildingsService {
     private isLoadingBuildingList = false;
@@ -33,17 +33,39 @@ export class PlayerBuildingsService {
         return this.worldLayer.mapService?.getMap() || null;
     }
 
-    //add constructor that receives the scene, layer and onBuildingSelect callback
+    //add constructor that receives the scene, hudLayer and onBuildingSelect callback
     constructor(
         private scene: Phaser.Scene,
-        private layer: Phaser.GameObjects.Layer,
+        private hudLayer: HUDLayer,
         private player: Player,
         private worldLayer: WorldLayer,
         private worldCamera: Camera
     ) {
+        this.scene.events.on('buildButtonClicked', () => {
+            this.showBuildingList();
+        });
+
+        this.scene.input.keyboard?.on('keydown-ESC', () => {
+            if (this.buildingPlacementMode) {
+                this.exitBuildingPlacementMode();
+            }
+        });
+
+        this.scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+            if (this.buildingPlacementMode) {
+                this.placeBuilding(pointer, this.scene.input);
+            }
+        });
+
+        this.scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+            if (this.buildingPlacementMode) {
+                this.updateBuildingPreview(pointer);
+                return;
+            }
+        });
     }
 
-    async showBuildingList(): Promise<void> {
+    private async showBuildingList(): Promise<void> {
         if (this.isLoadingBuildingList) {
             return;
         }
@@ -169,23 +191,10 @@ export class PlayerBuildingsService {
             }
         });
 
-        this.layer.add(this.buildingListPanel);
+        this.hudLayer.getLayer().add(this.buildingListPanel);
     }
 
-    public closeBuildingList(): void {
-        this.buildingListPanel.forEach(obj => obj.destroy());
-        this.buildingListPanel = [];
-    }
-
-    private startBuildingPlacement(building: BuildingData): void {
-        this.buildingPlacementMode = true;
-        this.buildingPlacementReady = false; // Reset ready flag when starting new placement
-        this.currentBuildingId = building.id;
-        this.currentBuildingWidth = building.width;
-        this.currentBuildingHeight = building.length;
-    }
-
-    public placeBuilding(pointer: Phaser.Input.Pointer, input: Phaser.Input.InputPlugin): void {
+    private placeBuilding(pointer: Phaser.Input.Pointer, input: Phaser.Input.InputPlugin): void {
         if (pointer.leftButtonDown()) {
             // Only start counting clicks after preview is created (on first mouse move)
             if (!this.buildingPreview) {
@@ -205,60 +214,7 @@ export class PlayerBuildingsService {
         }
     }
 
-    private async placeBuildingAtMouse(input: Phaser.Input.InputPlugin): Promise<void> {
-        // Update the preview one more time to ensure we have the latest state
-        this.updateBuildingPreview(input.activePointer);
-
-        if (!this.isValidPlacement || !this.buildingPreview) {
-            return;
-        }
-
-        // Get the current tile position
-        const worldPoint = this.worldCamera.getWorldPoint(
-            input.activePointer.x,
-            input.activePointer.y
-        );
-        const tilePos = this.worldToTile(worldPoint.x, worldPoint.y);
-
-        // Create the building sprite at the placement position
-        const isoCoords = IsometricService.toIsometricCoordinates(tilePos.x, tilePos.y);
-        const placedBuilding = this.scene.add.image(isoCoords.isoX, isoCoords.isoY, 'casa');
-        placedBuilding.setOrigin(0.5, 1);
-        placedBuilding.setDepth(isoCoords.isoY);
-        this.worldLayer.getLayer().add(placedBuilding);
-
-        // Send POST request to backend
-        const success = await this.sendBuildingToBackend(tilePos.x, tilePos.y);
-
-        if (!success) {
-            // Remove the building if backend rejected it
-            placedBuilding.destroy();
-        } else {
-            // Add the building to the WorldLayer's playerBuildings list
-            // This prevents overlap checking from allowing placement on the same spot
-            const newPlayerBuilding = {
-                id: Date.now(), // Temporary ID
-                building: {
-                    id: this.currentBuildingId,
-                    name: 'Building',
-                    image_url: '',
-                    description: '',
-                    width: this.currentBuildingWidth,
-                    length: this.currentBuildingHeight,
-                    building_category: '',
-                },
-                level: 1,
-                x: tilePos.x,
-                y: tilePos.y,
-            };
-            this.addPlayerBuilding(newPlayerBuilding);
-        }
-
-        // Exit placement mode
-        this.exitBuildingPlacementMode();
-    }
-
-    exitBuildingPlacementMode(): void {
+    private exitBuildingPlacementMode(): void {
         this.buildingPlacementMode = false;
         this.buildingPlacementReady = false; // Reset ready flag when exiting
 
@@ -274,7 +230,7 @@ export class PlayerBuildingsService {
         }
     }
 
-    updateBuildingPreview(pointer: Phaser.Input.Pointer): void {
+    private updateBuildingPreview(pointer: Phaser.Input.Pointer): void {
         // Convert screen coordinates to world coordinates
         const worldPoint = this.worldCamera.getWorldPoint(pointer.x, pointer.y);
 
@@ -332,7 +288,7 @@ export class PlayerBuildingsService {
                 return false;
             }
 
-            const response = await fetch(`${this.getBackendUrl()}/game/add_building`, {
+            const response = await fetch(`${CONFIG.backendUrl}/game/add_building`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
@@ -354,11 +310,7 @@ export class PlayerBuildingsService {
         }
     }
 
-    private getBackendUrl(): string {
-        return CONFIG.backendUrl;
-    }
-
-    public areTilesValid(startX: number, startY: number, width: number, height: number): boolean {
+    private areTilesValid(startX: number, startY: number, width: number, height: number): boolean {
         if (!this.map || !this.map.terrains) {
             return false;
         }
@@ -385,11 +337,7 @@ export class PlayerBuildingsService {
         }
 
         // Check if the building overlaps with any existing buildings
-        if (this.checkBuildingOverlap(startX, startY, width, height)) {
-            return false;
-        }
-
-        return true;
+        return !this.checkBuildingOverlap(startX, startY, width, height);
     }
 
     private checkBuildingOverlap(startX: number, startY: number, width: number, height: number): boolean {
@@ -418,14 +366,76 @@ export class PlayerBuildingsService {
         return false; // No overlap
     }
 
-    public addPlayerBuilding(playerBuilding: PlayerBuilding): void {
-        this.worldLayer.playerBuildings.push(playerBuilding);
-    }
-
-    public worldToTile(worldX: number, worldY: number): { x: number; y: number } {
+    private worldToTile(worldX: number, worldY: number): { x: number; y: number } {
         // Inverse isometric transformation
         const tileX = Math.floor((worldX / HALF_W + worldY / (HALF_H / 2)) / 2);
         const tileY = Math.floor((worldY / (HALF_H / 2) - worldX / HALF_W) / 2);
         return { x: tileX, y: tileY };
+    }
+
+    private closeBuildingList(): void {
+        this.buildingListPanel.forEach(obj => obj.destroy());
+        this.buildingListPanel = [];
+    }
+
+    private startBuildingPlacement(building: BuildingData): void {
+        this.buildingPlacementMode = true;
+        this.buildingPlacementReady = false; // Reset ready flag when starting new placement
+        this.currentBuildingId = building.id;
+        this.currentBuildingWidth = building.width;
+        this.currentBuildingHeight = building.length;
+    }
+
+    private async placeBuildingAtMouse(input: Phaser.Input.InputPlugin): Promise<void> {
+        // Update the preview one more time to ensure we have the latest state
+        this.updateBuildingPreview(input.activePointer);
+
+        if (!this.isValidPlacement || !this.buildingPreview) {
+            return;
+        }
+
+        // Get the current tile position
+        const worldPoint = this.worldCamera.getWorldPoint(
+            input.activePointer.x,
+            input.activePointer.y
+        );
+        const tilePos = this.worldToTile(worldPoint.x, worldPoint.y);
+
+        // Create the building sprite at the placement position
+        const isoCoords = IsometricService.toIsometricCoordinates(tilePos.x, tilePos.y);
+        const placedBuilding = this.scene.add.image(isoCoords.isoX, isoCoords.isoY, 'casa');
+        placedBuilding.setOrigin(0.5, 1);
+        placedBuilding.setDepth(isoCoords.isoY);
+        this.worldLayer.getLayer().add(placedBuilding);
+
+        // Send POST request to backend
+        const success = await this.sendBuildingToBackend(tilePos.x, tilePos.y);
+
+        if (!success) {
+            // Remove the building if backend rejected it
+            placedBuilding.destroy();
+        } else {
+            // Add the building to the WorldLayer's playerBuildings list
+            // This prevents overlap checking from allowing placement on the same spot
+            const newPlayerBuilding = {
+                id: Date.now(), // Temporary ID
+                building: {
+                    id: this.currentBuildingId,
+                    name: 'Building',
+                    image_url: '',
+                    description: '',
+                    width: this.currentBuildingWidth,
+                    length: this.currentBuildingHeight,
+                    building_category: '',
+                },
+                level: 1,
+                x: tilePos.x,
+                y: tilePos.y,
+            };
+            this.worldLayer.playerBuildings.push(newPlayerBuilding);
+        }
+
+        // Exit placement mode
+        this.exitBuildingPlacementMode();
     }
 }
