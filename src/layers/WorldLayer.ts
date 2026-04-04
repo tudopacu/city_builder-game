@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { MapService } from '../services/MapService';
 import { BuildingService } from '../services/BuildingService';
+import { ItemService } from '../services/ItemService';
 import { PlayerBuilding } from '../models/PlayerBuilding';
 import Layer = Phaser.GameObjects.Layer;
 import {IsometricService} from "../services/IsometricService";
@@ -43,9 +44,12 @@ export class WorldLayer {
   }
 
   private async loadPlayerBuildings(): Promise<void> {
-    // First, fetch available buildings (for caching/pre-loading purposes)
-    await BuildingService.getBuildings();
-    
+    // First, fetch available buildings and items (for caching/pre-loading purposes)
+    await Promise.all([
+      BuildingService.getBuildings(),
+      ItemService.getItems(),
+    ]);
+
     // Then, fetch player buildings
     this.playerBuildings = await BuildingService.getPlayerBuildings();
 
