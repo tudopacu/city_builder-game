@@ -1,5 +1,4 @@
 import {BuildingData} from "../dto/getBuildingsResponse";
-import {BuildingService} from "./BuildingService";
 import Phaser from "phaser";
 import {CONFIG} from "../configuration";
 import {IsometricService} from "./IsometricService";
@@ -75,7 +74,7 @@ export class PlayerBuildingsService {
         let buildings: BuildingData[] = [];
         let loadError = false;
         try {
-            buildings = await BuildingService.getBuildings();
+            buildings = this.scene.registry.get("buildings") || [];
         } catch {
             loadError = true;
         } finally {
@@ -342,7 +341,7 @@ export class PlayerBuildingsService {
 
     private checkBuildingOverlap(startX: number, startY: number, width: number, height: number): boolean {
         // Check if any tile of the new building overlaps with existing buildings
-        for (const existingBuilding of this.worldLayer.playerBuildings) {
+        for (const existingBuilding of this.scene.registry.get("playerBuildings") || []) {
             const existingX = existingBuilding.x;
             const existingY = existingBuilding.y;
             const existingWidth = existingBuilding.building.width;
@@ -432,7 +431,8 @@ export class PlayerBuildingsService {
                 x: tilePos.x,
                 y: tilePos.y,
             };
-            this.worldLayer.playerBuildings.push(newPlayerBuilding);
+
+            this.scene.registry.get("playerBuildings")?.push(newPlayerBuilding);
         }
 
         // Exit placement mode

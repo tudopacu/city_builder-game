@@ -2,85 +2,62 @@ import Phaser from 'phaser';
 import { MapService } from '../services/MapService';
 import { BuildingService } from '../services/BuildingService';
 import { ItemService } from '../services/ItemService';
-import { PlayerBuilding } from '../models/PlayerBuilding';
 import Layer = Phaser.GameObjects.Layer;
-import {IsometricService} from "../services/IsometricService";
 import {TILE_SET_KEY} from "../constants/constants";
-
-const BUILDING_LABEL_OFFSET_Y = 10;
+import {Item} from "../models/Item";
+import {RenderService} from "../services/RenderService";
 
 const TILE_WIDTH = 64;
 const TILE_HEIGHT = 64;
 
 export class WorldLayer {
   private layer!: Layer;
-  public playerBuildings: PlayerBuilding[] = [];
+  public items: Item[] = [];
   public mapService: MapService | null = null;
+  public renderService: RenderService | null = null;
 
   constructor(
       private scene: Phaser.Scene
   ) {}
 
-  public create(): void {
-    this.layer = this.scene.add.layer();
-    this.mapService = new MapService(this.scene, this.layer)
-    this.mapService.drawMap()
-  }
-
-  public async initialize(): Promise<void> {
-    await this.loadPlayerBuildings();
-  }
-
   public getLayer(): Layer {
     return this.layer;
   }
 
+  public create(): void {
+    this.layer = this.scene.add.layer();
+    this.mapService = new MapService(this.scene, this.layer)
+    this.renderService = new RenderService(this.scene, this.layer)
+    this.mapService.drawMap()
+  }
+
+  public async initialize(): Promise<void> {
+    await this.loadBuildings();
+    await this.loadItems();
+    await this.loadPlayerBuildings();
+
+    this.renderService?.renderPlayerBuildings();
+  }
+
   public preload(): void {
+    //todo load tile set dynamically based on map data from backend
     this.scene.load.spritesheet(TILE_SET_KEY, "assets/grass_and_water.png", {
       frameWidth: TILE_WIDTH,
       frameHeight: TILE_HEIGHT,
     });
+    //todo load building images dynamically based on building data from backend
     this.scene.load.image('casa', 'assets/casa.png');
   }
 
-  private async loadPlayerBuildings(): Promise<void> {
-    // First, fetch available buildings and items (for caching/pre-loading purposes)
-    await Promise.all([
-      BuildingService.getBuildings(),
-      ItemService.getItems(),
-    ]);
-
-    // Then, fetch player buildings
-    this.playerBuildings = await BuildingService.getPlayerBuildings();
-
-    if (this.playerBuildings.length === 0) {
-      return;
-    }
-
-    this.playerBuildings.forEach(playerBuilding => {
-      this.renderBuilding(playerBuilding);
-    });
+  private async loadBuildings(): Promise<void> {
+      this.scene.registry.set("buildings",  await BuildingService.getBuildings());
   }
 
-  private renderBuilding(playerBuilding: PlayerBuilding): void {
-    // Calculate isometric position based on building coordinates
-    const { isoX, isoY } = IsometricService.toIsometricCoordinates(playerBuilding.x, playerBuilding.y);
+  private async loadItems(): Promise<void> {
+    this.scene.registry.set("items",  await ItemService.getItems());
+  }
 
-    // Add the building image
-    const buildingImage = this.scene.add.image(isoX, isoY, 'casa');
-    buildingImage.setOrigin(0.5, 1);
-    buildingImage.setDepth(isoY); // Set depth based on isoY for proper layering
-
-    // Add building name label
-    const text = this.scene.add.text(isoX, isoY - BUILDING_LABEL_OFFSET_Y, playerBuilding.building.name, {
-      fontSize: '12px',
-      color: '#ffffff',
-      backgroundColor: '#000000',
-      padding: { x: 3, y: 2 },
-    });
-    text.setOrigin(0.5, 1);
-    text.setDepth(isoY + 1); // Ensure the label is above the building
-
-    this.layer.add([buildingImage, text]);
+  private async loadPlayerBuildings(): Promise<void> {
+    this.scene.registry.set("playerBuildings",  await BuildingService.getPlayerBuildings());
   }
 }
