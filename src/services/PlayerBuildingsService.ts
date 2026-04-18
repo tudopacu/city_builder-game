@@ -13,7 +13,6 @@ export class PlayerBuildingsService {
     private isLoadingBuildingList = false;
     private buildingListPanel: Phaser.GameObjects.GameObject[] = [];
     private buildingPreview: Phaser.GameObjects.Image | null = null;
-    private buildingPlacementReady = false;
     private buildingOverlay: Phaser.GameObjects.Rectangle | null = null;
     private isValidPlacement = false;
     private currentBuildingId = 1;
@@ -199,13 +198,6 @@ export class PlayerBuildingsService {
             if (!this.buildingPreview) {
                 return;
             }
-
-            // First click: just mark as ready for placement
-            if (!this.buildingPlacementReady) {
-                this.buildingPlacementReady = true;
-                return;
-            }
-            // Second click: actually place the building
             this.placeBuildingAtMouse(input);
         } else if (pointer.rightButtonDown()) {
             // Right-click cancels building placement
@@ -215,7 +207,6 @@ export class PlayerBuildingsService {
 
     private exitBuildingPlacementMode(): void {
         this.buildingPlacementMode = false;
-        this.buildingPlacementReady = false; // Reset ready flag when exiting
 
         // Clean up preview and overlay
         if (this.buildingPreview) {
@@ -379,7 +370,6 @@ export class PlayerBuildingsService {
 
     private startBuildingPlacement(building: BuildingData): void {
         this.buildingPlacementMode = true;
-        this.buildingPlacementReady = false; // Reset ready flag when starting new placement
         this.currentBuildingId = building.id;
         this.currentBuildingWidth = building.width;
         this.currentBuildingHeight = building.length;
