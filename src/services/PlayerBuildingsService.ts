@@ -1,4 +1,3 @@
-import {BuildingData} from "../dto/getBuildingsResponse";
 import Phaser from "phaser";
 import {CONFIG} from "../configuration";
 import {IsometricService} from "./IsometricService";
@@ -7,11 +6,10 @@ import {HALF_H, HALF_W} from "../constants/constants";
 import {Map} from "../models/Map";
 import {WorldLayer} from "../layers/WorldLayer";
 import Camera = Phaser.Cameras.Scene2D.Camera;
-import {HUDLayer} from "../layers/HUDLayer";
+import {BuildingData} from "../dto/getBuildingsResponse";
 
 export class PlayerBuildingsService {
-    private isLoadingBuildingList = false;
-    private buildingListPanel: Phaser.GameObjects.GameObject[] = [];
+
     private buildingPreview: Phaser.GameObjects.Image | null = null;
     private buildingOverlay: Phaser.GameObjects.Rectangle | null = null;
     private isValidPlacement = false;
@@ -31,18 +29,12 @@ export class PlayerBuildingsService {
         return this.worldLayer.mapService?.getMap() || null;
     }
 
-    //add constructor that receives the scene, hudLayer and onBuildingSelect callback
     constructor(
         private scene: Phaser.Scene,
-        private hudLayer: HUDLayer,
         private player: Player,
         private worldLayer: WorldLayer,
         private worldCamera: Camera
     ) {
-        this.scene.events.on('buildButtonClicked', () => {
-            this.showBuildingList();
-        });
-
         this.scene.input.keyboard?.on('keydown-ESC', () => {
             if (this.buildingPlacementMode) {
                 this.exitBuildingPlacementMode();
@@ -61,135 +53,10 @@ export class PlayerBuildingsService {
                 return;
             }
         });
-    }
 
-    private async showBuildingList(): Promise<void> {
-        if (this.isLoadingBuildingList) {
-            return;
-        }
-        this.isLoadingBuildingList = true;
-        this.closeBuildingList();
-
-        let buildings: BuildingData[] = [];
-        let loadError = false;
-        try {
-            buildings = this.scene.registry.get("buildings") || [];
-        } catch {
-            loadError = true;
-        } finally {
-            this.isLoadingBuildingList = false;
-        }
-
-        const panelX = 50;
-        const panelY = 80;
-        const panelWidth = 500;
-        const headerHeight = 44;
-        const rowHeight = 70;
-        const rowSpacing = 8;
-        const padding = 12;
-        const emptyRowHeight = 36;
-
-        const contentRows = buildings.length > 0 ? buildings.length : 1;
-        const singleRowHeight = buildings.length > 0 ? rowHeight : emptyRowHeight;
-        const panelHeight = headerHeight + contentRows * (singleRowHeight + rowSpacing) + padding;
-
-        // Panel background
-        const panelBg = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x1a1a2e, 0.97)
-            .setOrigin(0, 0);
-        this.buildingListPanel.push(panelBg);
-
-        // Panel title
-        const title = this.scene.add.text(panelX + padding, panelY + padding, 'Select a Building', {
-            fontSize: '18px',
-            color: '#ffffff',
-            fontStyle: 'bold',
+        this.scene.events.on('startBuildingPlacementEvent', (building: BuildingData) => {
+            this.startBuildingPlacement(building);
         });
-        this.buildingListPanel.push(title);
-
-        // Close button
-        const closeBtn = this.scene.add.text(panelX + panelWidth - padding - 16, panelY + padding, '✕', {
-            fontSize: '16px',
-            color: '#ff6666',
-        }).setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => this.closeBuildingList());
-        this.buildingListPanel.push(closeBtn);
-
-        // Divider line
-        const divider = this.scene.add.rectangle(panelX, panelY + headerHeight - 2, panelWidth, 2, 0x444466)
-            .setOrigin(0, 0);
-        this.buildingListPanel.push(divider);
-
-        const rowsStartY = panelY + headerHeight;
-
-        if (loadError) {
-            const errorText = this.scene.add.text(panelX + padding, rowsStartY + padding, 'Failed to load buildings.', {
-                fontSize: '14px',
-                color: '#ff6666',
-            });
-            this.buildingListPanel.push(errorText);
-        } else if (buildings.length === 0) {
-            const noBuildings = this.scene.add.text(panelX + padding, rowsStartY + padding, 'No buildings available.', {
-                fontSize: '14px',
-                color: '#aaaaaa',
-            });
-            this.buildingListPanel.push(noBuildings);
-        }
-
-        buildings.forEach((building, index) => {
-            const rowY = rowsStartY + index * (rowHeight + rowSpacing) + rowSpacing;
-
-            // Row background (interactive)
-            const rowBg = this.scene.add.rectangle(
-                panelX + padding,
-                rowY,
-                panelWidth - padding * 2,
-                rowHeight,
-                0x2a2a4a,
-            ).setOrigin(0, 0)
-                .setInteractive({ useHandCursor: true })
-                .on('pointerover', () => rowBg.setFillStyle(0x3a3a6a))
-                .on('pointerout', () => rowBg.setFillStyle(0x2a2a4a))
-                .on('pointerdown', () => {
-                    this.closeBuildingList();
-                    this.startBuildingPlacement(building);
-                });
-            this.buildingListPanel.push(rowBg);
-
-            // Building name
-            const nameText = this.scene.add.text(panelX + padding * 2, rowY + 6, building.name, {
-                fontSize: '15px',
-                color: '#ffffff',
-                fontStyle: 'bold',
-            });
-            this.buildingListPanel.push(nameText);
-
-            // Costs table header
-            if (building.costs && building.costs.length > 0) {
-                const costsHeader = this.scene.add.text(panelX + padding * 2, rowY + 28, 'Costs:', {
-                    fontSize: '11px',
-                    color: '#aaaacc',
-                });
-                this.buildingListPanel.push(costsHeader);
-
-                building.costs.forEach((cost, costIndex) => {
-                    const costText = this.scene.add.text(
-                        panelX + padding * 2 + 50 + costIndex * 140,
-                        rowY + 28,
-                        `${cost.item_name}: ${cost.quantity}`,
-                        { fontSize: '11px', color: '#cccccc' },
-                    );
-                    this.buildingListPanel.push(costText);
-                });
-            } else {
-                const noCosts = this.scene.add.text(panelX + padding * 2, rowY + 28, 'Costs: —', {
-                    fontSize: '11px',
-                    color: '#666688',
-                });
-                this.buildingListPanel.push(noCosts);
-            }
-        });
-
-        this.hudLayer.getLayer().add(this.buildingListPanel);
     }
 
     private placeBuilding(pointer: Phaser.Input.Pointer, input: Phaser.Input.InputPlugin): void {
@@ -363,18 +230,6 @@ export class PlayerBuildingsService {
         return { x: tileX, y: tileY };
     }
 
-    private closeBuildingList(): void {
-        this.buildingListPanel.forEach(obj => obj.destroy());
-        this.buildingListPanel = [];
-    }
-
-    private startBuildingPlacement(building: BuildingData): void {
-        this.buildingPlacementMode = true;
-        this.currentBuildingId = building.id;
-        this.currentBuildingWidth = building.width;
-        this.currentBuildingHeight = building.length;
-    }
-
     private async placeBuildingAtMouse(input: Phaser.Input.InputPlugin): Promise<void> {
         // Update the preview one more time to ensure we have the latest state
         this.updateBuildingPreview(input.activePointer);
@@ -427,5 +282,12 @@ export class PlayerBuildingsService {
 
         // Exit placement mode
         this.exitBuildingPlacementMode();
+    }
+
+    private startBuildingPlacement(building: BuildingData): void {
+        this.buildingPlacementMode = true;
+        this.currentBuildingId = building.id;
+        this.currentBuildingWidth = building.width;
+        this.currentBuildingHeight = building.length;
     }
 }

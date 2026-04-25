@@ -39,7 +39,7 @@ export class GameScene extends Phaser.Scene {
 
     this.setupCameraControls();
 
-    this.playerBuildingsService = new PlayerBuildingsService(this, this.hudLayer, this.player, this.worldLayer, this.worldCamera);
+    this.playerBuildingsService = new PlayerBuildingsService(this, this.player, this.worldLayer, this.worldCamera);
   }
 
   private setupCameraControls(): void {

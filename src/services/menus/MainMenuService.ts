@@ -1,7 +1,7 @@
 import Phaser from "phaser";
-import {HUDLayer} from "../layers/HUDLayer";
+import {HUDLayer} from "../../layers/HUDLayer";
 
-export class MenuService {
+export class MainMenuService {
 
         constructor(
             private scene: Phaser.Scene,
