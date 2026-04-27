@@ -80,7 +80,15 @@ export class MapService {
             img.setCrop(CROP_X, CROP_Y, CROP_W, CROP_H);
             img.setOrigin(0.5, 1);
 
-            this.layer.add([img]);
+            const label = this.scene.add.text(isoX, isoY - CROP_H / 2, `${tile.x}/${tile.y}`, {
+                fontSize: '8px',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 2,
+            });
+            label.setOrigin(0.5, 0.5);
+
+            this.layer.add([img, label]);
         });
     }
 
