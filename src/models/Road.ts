@@ -1,14 +1,5 @@
-export interface Intersection {
-    id: number;
-    x: number;
-    y: number;
-}
-
-export interface RoadType {
-    id: number;
-    type: string;
-    image_url: string;
-}
+import { Intersection } from './Intersection';
+import { RoadType } from './RoadType';
 
 export interface Road {
     id: number;
