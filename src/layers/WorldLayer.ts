@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { MapService } from '../services/MapService';
 import { BuildingService } from '../services/BuildingService';
 import { ItemService } from '../services/ItemService';
+import { RoadService } from '../services/RoadService';
 import Layer = Phaser.GameObjects.Layer;
 import {TILE_SET_KEY} from "../constants/constants";
 import {Item} from "../models/Item";
@@ -35,6 +36,7 @@ export class WorldLayer {
     await this.loadBuildings();
     await this.loadItems();
     await this.loadPlayerBuildings();
+    await this.loadRoads();
 
     this.renderService?.renderPlayerBuildings();
   }
@@ -59,5 +61,9 @@ export class WorldLayer {
 
   private async loadPlayerBuildings(): Promise<void> {
     this.scene.registry.set("playerBuildings",  await BuildingService.getPlayerBuildings());
+  }
+
+  private async loadRoads(): Promise<void> {
+    this.scene.registry.set("roads", await RoadService.getRoads(2, 1));
   }
 }
