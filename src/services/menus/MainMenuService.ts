@@ -20,10 +20,13 @@ export class MainMenuService {
         const buttonColor = 0x4a4a4a;
         const buttonHoverColor = 0x666666;
 
+        // Center all three buttons together
+        const totalWidth = 3 * buttonWidth + 2 * buttonSpacing;
+        const startX = centerX - totalWidth / 2;
+
         // Build button
-        const buildButtonX = centerX - (buttonWidth + buttonSpacing / 2);
         const buildButton = this.createButton(
-            buildButtonX,
+            startX,
             bottomY,
             buttonWidth,
             buttonHeight,
@@ -35,10 +38,23 @@ export class MainMenuService {
             }
         );
 
+        // Roads button
+        const roadsButton = this.createButton(
+            startX + buttonWidth + buttonSpacing,
+            bottomY,
+            buttonWidth,
+            buttonHeight,
+            'Roads',
+            buttonColor,
+            buttonHoverColor,
+            () => {
+                this.scene.events.emit('roadsButtonClicked');
+            }
+        );
+
         // World Map button
-        const worldMapButtonX = centerX + (buttonSpacing / 2);
         const worldMapButton = this.createButton(
-            worldMapButtonX,
+            startX + 2 * (buttonWidth + buttonSpacing),
             bottomY,
             buttonWidth,
             buttonHeight,
@@ -51,7 +67,7 @@ export class MainMenuService {
             }
         );
 
-        this.hudLayer.getLayer().add([...buildButton, ...worldMapButton]);
+        this.hudLayer.getLayer().add([...buildButton, ...roadsButton, ...worldMapButton]);
     }
 
     private createButton(

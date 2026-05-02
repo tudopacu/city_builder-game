@@ -4,6 +4,7 @@ import { WorldLayer } from '../layers/WorldLayer';
 import { HUDLayer } from '../layers/HUDLayer';
 import Camera = Phaser.Cameras.Scene2D.Camera;
 import {PlayerBuildingsService} from "../services/PlayerBuildingsService";
+import {PlayerRoadsService} from "../services/PlayerRoadsService";
 
 
 export class GameScene extends Phaser.Scene {
@@ -15,11 +16,13 @@ export class GameScene extends Phaser.Scene {
   private worldCamera!: Camera;
   private hudCamera!: Camera;
   public playerBuildingsService: PlayerBuildingsService;
+  public playerRoadsService: PlayerRoadsService;
 
   constructor(player: Player) {
     super({ key: 'GameScene' });
     this.player = player;
     this.playerBuildingsService = null as unknown as PlayerBuildingsService;
+    this.playerRoadsService = null as unknown as PlayerRoadsService;
   }
 
   preload() {
@@ -40,6 +43,7 @@ export class GameScene extends Phaser.Scene {
     this.setupCameraControls();
 
     this.playerBuildingsService = new PlayerBuildingsService(this, this.player, this.worldLayer, this.worldCamera);
+    this.playerRoadsService = new PlayerRoadsService(this, this.player, this.worldLayer, this.worldCamera);
   }
 
   private setupCameraControls(): void {
