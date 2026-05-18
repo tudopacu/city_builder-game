@@ -7,6 +7,7 @@ export interface PlayerBuilding {
     level: number;
     x: number;
     y: number;
+    isTemporary?: boolean;
     renderedBuildingImage?: Phaser.GameObjects.Image;
     renderedBuildingLabel?: Phaser.GameObjects.Text;
 }

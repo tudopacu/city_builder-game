@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import {HUDLayer} from "../../layers/HUDLayer";
 
 const ERROR_MESSAGE_DURATION_MS = 3000;
+const ERROR_MESSAGE_BOTTOM_OFFSET = 130;
 
 export class MainMenuService {
     private errorMessageText: Phaser.GameObjects.Text | null = null;
@@ -129,7 +130,7 @@ export class MainMenuService {
 
         this.errorMessageText = this.scene.add.text(
             this.scene.scale.width / 2,
-            this.scene.scale.height - 130,
+            this.scene.scale.height - ERROR_MESSAGE_BOTTOM_OFFSET,
             message,
             {
                 fontSize: '14px',

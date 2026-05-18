@@ -19,7 +19,7 @@ export class PlayerBuildingsService {
     private currentBuildingName = 'Building';
     private currentBuildingWidth = 1;
     private currentBuildingHeight = 1;
-    private nextTemporaryBuildingId = -1;
+    private nextTemporaryBuildingId = Number.MAX_SAFE_INTEGER;
     public buildingPlacementMode = false;
 
     // Building overlay constants
@@ -146,12 +146,12 @@ export class PlayerBuildingsService {
         }
     }
 
-    private async sendBuildingToBackend(x: number, y: number): Promise<boolean> {
+    private async sendBuildingToBackend(x: number, y: number): Promise<{ success: boolean; playerBuildingId: number | null }> {
         try {
             const mapId = this.worldLayer.mapService?.getMapId();
             if (!mapId) {
                 console.error('Map ID is null or undefined.');
-                return false;
+                return { success: false, playerBuildingId: null };
             }
 
             const response = await fetch(`${CONFIG.backendUrl}/game/add_building`, {
@@ -169,10 +169,16 @@ export class PlayerBuildingsService {
                 }),
             });
 
-            return response.ok;
+            if (!response.ok) {
+                return { success: false, playerBuildingId: null };
+            }
+
+            const responseData = await response.json().catch(() => null);
+            const playerBuildingId = this.extractPlayerBuildingId(responseData);
+            return { success: true, playerBuildingId };
         } catch (error) {
             console.error('Error sending building to backend:', error);
-            return false;
+            return { success: false, playerBuildingId: null };
         }
     }
 
@@ -271,9 +277,9 @@ export class PlayerBuildingsService {
         this.worldLayer.getLayer().add(placedBuildingLabel);
 
         // Send POST request to backend
-        const success = await this.sendBuildingToBackend(tilePos.x, tilePos.y);
+        const result = await this.sendBuildingToBackend(tilePos.x, tilePos.y);
 
-        if (!success) {
+        if (!result.success) {
             // Remove the building if backend rejected it
             placedBuilding.destroy();
             placedBuildingLabel.destroy();
@@ -281,7 +287,7 @@ export class PlayerBuildingsService {
             // Add the building to the WorldLayer's playerBuildings list
             // This prevents overlap checking from allowing placement on the same spot
             const newPlayerBuilding: PlayerBuilding = {
-                id: this.nextTemporaryBuildingId--,
+                id: result.playerBuildingId ?? this.nextTemporaryBuildingId--,
                 building: {
                     id: this.currentBuildingId,
                     name: this.currentBuildingName,
@@ -294,6 +300,7 @@ export class PlayerBuildingsService {
                 level: 1,
                 x: tilePos.x,
                 y: tilePos.y,
+                isTemporary: result.playerBuildingId === null,
                 renderedBuildingImage: placedBuilding,
                 renderedBuildingLabel: placedBuildingLabel,
             };
@@ -327,6 +334,11 @@ export class PlayerBuildingsService {
             return;
         }
 
+        if (targetBuilding.isTemporary) {
+            this.scene.events.emit('showErrorMessage', 'Building is not synced yet. Reload and try again.');
+            return;
+        }
+
         const deleted = await BuildingService.deletePlayerBuilding(targetBuilding.id);
         if (!deleted) {
             this.scene.events.emit('showErrorMessage', 'Failed to delete building.');
@@ -345,5 +357,23 @@ export class PlayerBuildingsService {
             tileX < building.x + building.building.width &&
             tileY >= building.y &&
             tileY < building.y + building.building.length;
+    }
+
+    private extractPlayerBuildingId(responseData: unknown): number | null {
+        if (!responseData || typeof responseData !== 'object') {
+            return null;
+        }
+
+        const responseObject = responseData as Record<string, unknown>;
+        const possibleIdFields = ['player_building_id', 'playerBuildingId', 'id'];
+
+        for (const field of possibleIdFields) {
+            const value = responseObject[field];
+            if (typeof value === 'number') {
+                return value;
+            }
+        }
+
+        return null;
     }
 }
