@@ -16,8 +16,10 @@ export class PlayerBuildingsService {
     private buildingOverlay: Phaser.GameObjects.Rectangle | null = null;
     private isValidPlacement = false;
     private currentBuildingId = 1;
+    private currentBuildingName = 'Building';
     private currentBuildingWidth = 1;
     private currentBuildingHeight = 1;
+    private nextTemporaryBuildingId = -1;
     public buildingPlacementMode = false;
 
     // Building overlay constants
@@ -26,6 +28,7 @@ export class PlayerBuildingsService {
     private OVERLAY_HEIGHT = 24;
     private OVERLAY_ALPHA = 0.4;
     private PREVIEW_ALPHA = 0.7;
+    private BUILDING_LABEL_OFFSET_Y = 10;
 
     private get map(): Map | null {
         return this.worldLayer.mapService?.getMap() || null;
@@ -256,7 +259,16 @@ export class PlayerBuildingsService {
         const placedBuilding = this.scene.add.image(isoCoords.isoX, isoCoords.isoY, 'casa');
         placedBuilding.setOrigin(0.5, 1);
         placedBuilding.setDepth(isoCoords.isoY);
+        const placedBuildingLabel = this.scene.add.text(isoCoords.isoX, isoCoords.isoY - this.BUILDING_LABEL_OFFSET_Y, this.currentBuildingName, {
+            fontSize: '12px',
+            color: '#ffffff',
+            backgroundColor: '#000000',
+            padding: { x: 3, y: 2 },
+        });
+        placedBuildingLabel.setOrigin(0.5, 1);
+        placedBuildingLabel.setDepth(isoCoords.isoY + 1);
         this.worldLayer.getLayer().add(placedBuilding);
+        this.worldLayer.getLayer().add(placedBuildingLabel);
 
         // Send POST request to backend
         const success = await this.sendBuildingToBackend(tilePos.x, tilePos.y);
@@ -264,14 +276,15 @@ export class PlayerBuildingsService {
         if (!success) {
             // Remove the building if backend rejected it
             placedBuilding.destroy();
+            placedBuildingLabel.destroy();
         } else {
             // Add the building to the WorldLayer's playerBuildings list
             // This prevents overlap checking from allowing placement on the same spot
             const newPlayerBuilding: PlayerBuilding = {
-                id: Date.now(), // Temporary ID
+                id: this.nextTemporaryBuildingId--,
                 building: {
                     id: this.currentBuildingId,
-                    name: 'Building',
+                    name: this.currentBuildingName,
                     image_url: '',
                     description: '',
                     width: this.currentBuildingWidth,
@@ -282,6 +295,7 @@ export class PlayerBuildingsService {
                 x: tilePos.x,
                 y: tilePos.y,
                 renderedBuildingImage: placedBuilding,
+                renderedBuildingLabel: placedBuildingLabel,
             };
 
             this.scene.registry.get("playerBuildings")?.push(newPlayerBuilding);
@@ -294,6 +308,7 @@ export class PlayerBuildingsService {
     private startBuildingPlacement(building: BuildingData): void {
         this.buildingPlacementMode = true;
         this.currentBuildingId = building.id;
+        this.currentBuildingName = building.name;
         this.currentBuildingWidth = building.width;
         this.currentBuildingHeight = building.length;
     }
