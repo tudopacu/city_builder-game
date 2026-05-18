@@ -7,6 +7,8 @@ import {Map} from "../models/Map";
 import {WorldLayer} from "../layers/WorldLayer";
 import Camera = Phaser.Cameras.Scene2D.Camera;
 import {BuildingData} from "../dto/getBuildingsResponse";
+import {BuildingService} from "./BuildingService";
+import {PlayerBuilding} from "../models/PlayerBuilding";
 
 export class PlayerBuildingsService {
 
@@ -56,6 +58,10 @@ export class PlayerBuildingsService {
 
         this.scene.events.on('startBuildingPlacementEvent', (building: BuildingData) => {
             this.startBuildingPlacement(building);
+        });
+
+        this.scene.events.on('removeButtonClicked', () => {
+            this.removeBuildingAtMouse();
         });
     }
 
@@ -261,7 +267,7 @@ export class PlayerBuildingsService {
         } else {
             // Add the building to the WorldLayer's playerBuildings list
             // This prevents overlap checking from allowing placement on the same spot
-            const newPlayerBuilding = {
+            const newPlayerBuilding: PlayerBuilding = {
                 id: Date.now(), // Temporary ID
                 building: {
                     id: this.currentBuildingId,
@@ -275,6 +281,7 @@ export class PlayerBuildingsService {
                 level: 1,
                 x: tilePos.x,
                 y: tilePos.y,
+                renderedBuildingImage: placedBuilding,
             };
 
             this.scene.registry.get("playerBuildings")?.push(newPlayerBuilding);
@@ -289,5 +296,39 @@ export class PlayerBuildingsService {
         this.currentBuildingId = building.id;
         this.currentBuildingWidth = building.width;
         this.currentBuildingHeight = building.length;
+    }
+
+    private async removeBuildingAtMouse(): Promise<void> {
+        const worldPoint = this.worldCamera.getWorldPoint(
+            this.scene.input.activePointer.x,
+            this.scene.input.activePointer.y
+        );
+        const tilePos = this.worldToTile(worldPoint.x, worldPoint.y);
+
+        const playerBuildings: PlayerBuilding[] = this.scene.registry.get("playerBuildings") || [];
+        const targetBuilding = playerBuildings.find((building) => this.isPointerOverBuilding(tilePos.x, tilePos.y, building));
+
+        if (!targetBuilding) {
+            return;
+        }
+
+        const deleted = await BuildingService.deletePlayerBuilding(targetBuilding.id);
+        if (!deleted) {
+            this.scene.events.emit('showErrorMessage', 'Failed to delete building.');
+            return;
+        }
+
+        targetBuilding.renderedBuildingImage?.destroy();
+        targetBuilding.renderedBuildingLabel?.destroy();
+
+        const updatedPlayerBuildings = playerBuildings.filter((building) => building.id !== targetBuilding.id);
+        this.scene.registry.set("playerBuildings", updatedPlayerBuildings);
+    }
+
+    private isPointerOverBuilding(tileX: number, tileY: number, building: PlayerBuilding): boolean {
+        return tileX >= building.x &&
+            tileX < building.x + building.building.width &&
+            tileY >= building.y &&
+            tileY < building.y + building.building.length;
     }
 }

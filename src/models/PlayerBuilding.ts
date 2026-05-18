@@ -1,4 +1,5 @@
 import {Building} from "./Building";
+import Phaser from "phaser";
 
 export interface PlayerBuilding {
     id: number;
@@ -6,4 +7,6 @@ export interface PlayerBuilding {
     level: number;
     x: number;
     y: number;
+    renderedBuildingImage?: Phaser.GameObjects.Image;
+    renderedBuildingLabel?: Phaser.GameObjects.Text;
 }

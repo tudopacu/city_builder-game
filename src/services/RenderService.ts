@@ -36,6 +36,8 @@ export class RenderService {
         text.setOrigin(0.5, 1);
         text.setDepth(isoY + 1); // Ensure the label is above the building
 
+        playerBuilding.renderedBuildingImage = buildingImage;
+        playerBuilding.renderedBuildingLabel = text;
         this.layer.add([buildingImage, text]);
     }
 }

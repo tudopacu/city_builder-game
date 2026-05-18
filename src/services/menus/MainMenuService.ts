@@ -2,11 +2,16 @@ import Phaser from "phaser";
 import {HUDLayer} from "../../layers/HUDLayer";
 
 export class MainMenuService {
+    private errorMessageText: Phaser.GameObjects.Text | null = null;
+    private errorMessageTimer: Phaser.Time.TimerEvent | null = null;
 
         constructor(
             private scene: Phaser.Scene,
             private hudLayer: HUDLayer,
         ) {
+            this.scene.events.on('showErrorMessage', (message: string) => {
+                this.showErrorMessage(message);
+            });
         }
 
     public createMenu(): void {
@@ -51,7 +56,22 @@ export class MainMenuService {
             }
         );
 
-        this.hudLayer.getLayer().add([...buildButton, ...worldMapButton]);
+        // Remove button
+        const removeButtonX = worldMapButtonX + buttonWidth + buttonSpacing;
+        const removeButton = this.createButton(
+            removeButtonX,
+            bottomY,
+            buttonWidth,
+            buttonHeight,
+            'Remove',
+            buttonColor,
+            buttonHoverColor,
+            () => {
+                this.scene.events.emit('removeButtonClicked');
+            }
+        );
+
+        this.hudLayer.getLayer().add([...buildButton, ...worldMapButton, ...removeButton]);
     }
 
     private createButton(
@@ -92,5 +112,37 @@ export class MainMenuService {
             });
 
         return [buttonBg, buttonText];
+    }
+
+    private showErrorMessage(message: string): void {
+        if (this.errorMessageText) {
+            this.errorMessageText.destroy();
+            this.errorMessageText = null;
+        }
+
+        if (this.errorMessageTimer) {
+            this.errorMessageTimer.destroy();
+            this.errorMessageTimer = null;
+        }
+
+        this.errorMessageText = this.scene.add.text(
+            this.scene.scale.width / 2,
+            this.scene.scale.height - 130,
+            message,
+            {
+                fontSize: '14px',
+                color: '#ff6666',
+                backgroundColor: '#000000',
+                padding: { x: 8, y: 6 },
+            }
+        ).setOrigin(0.5, 0.5);
+
+        this.hudLayer.getLayer().add(this.errorMessageText);
+
+        this.errorMessageTimer = this.scene.time.delayedCall(3000, () => {
+            this.errorMessageText?.destroy();
+            this.errorMessageText = null;
+            this.errorMessageTimer = null;
+        });
     }
 }
