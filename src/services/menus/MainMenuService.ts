@@ -1,6 +1,8 @@
 import Phaser from "phaser";
 import {HUDLayer} from "../../layers/HUDLayer";
 
+const ERROR_MESSAGE_DURATION_MS = 3000;
+
 export class MainMenuService {
     private errorMessageText: Phaser.GameObjects.Text | null = null;
     private errorMessageTimer: Phaser.Time.TimerEvent | null = null;
@@ -139,7 +141,7 @@ export class MainMenuService {
 
         this.hudLayer.getLayer().add(this.errorMessageText);
 
-        this.errorMessageTimer = this.scene.time.delayedCall(3000, () => {
+        this.errorMessageTimer = this.scene.time.delayedCall(ERROR_MESSAGE_DURATION_MS, () => {
             this.errorMessageText?.destroy();
             this.errorMessageText = null;
             this.errorMessageTimer = null;
