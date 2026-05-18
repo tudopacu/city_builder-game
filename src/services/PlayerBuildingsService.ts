@@ -7,6 +7,8 @@ import {Map} from "../models/Map";
 import {WorldLayer} from "../layers/WorldLayer";
 import Camera = Phaser.Cameras.Scene2D.Camera;
 import {BuildingData} from "../dto/getBuildingsResponse";
+import {BuildingService} from "./BuildingService";
+import {PlayerBuilding} from "../models/PlayerBuilding";
 
 export class PlayerBuildingsService {
 
@@ -14,8 +16,10 @@ export class PlayerBuildingsService {
     private buildingOverlay: Phaser.GameObjects.Rectangle | null = null;
     private isValidPlacement = false;
     private currentBuildingId = 1;
+    private currentBuildingName = 'Building';
     private currentBuildingWidth = 1;
     private currentBuildingHeight = 1;
+    private nextTemporaryBuildingId = Number.MAX_SAFE_INTEGER;
     public buildingPlacementMode = false;
 
     // Building overlay constants
@@ -24,6 +28,7 @@ export class PlayerBuildingsService {
     private OVERLAY_HEIGHT = 24;
     private OVERLAY_ALPHA = 0.4;
     private PREVIEW_ALPHA = 0.7;
+    private BUILDING_LABEL_OFFSET_Y = 10;
 
     private get map(): Map | null {
         return this.worldLayer.mapService?.getMap() || null;
@@ -56,6 +61,10 @@ export class PlayerBuildingsService {
 
         this.scene.events.on('startBuildingPlacementEvent', (building: BuildingData) => {
             this.startBuildingPlacement(building);
+        });
+
+        this.scene.events.on('removeButtonClicked', () => {
+            this.removeBuildingAtMouse();
         });
     }
 
@@ -137,12 +146,12 @@ export class PlayerBuildingsService {
         }
     }
 
-    private async sendBuildingToBackend(x: number, y: number): Promise<boolean> {
+    private async sendBuildingToBackend(x: number, y: number): Promise<{ success: boolean; playerBuildingId: number | null }> {
         try {
             const mapId = this.worldLayer.mapService?.getMapId();
             if (!mapId) {
                 console.error('Map ID is null or undefined.');
-                return false;
+                return { success: false, playerBuildingId: null };
             }
 
             const response = await fetch(`${CONFIG.backendUrl}/game/add_building`, {
@@ -160,10 +169,16 @@ export class PlayerBuildingsService {
                 }),
             });
 
-            return response.ok;
+            if (!response.ok) {
+                return { success: false, playerBuildingId: null };
+            }
+
+            const responseData = await response.json().catch(() => null);
+            const playerBuildingId = this.extractPlayerBuildingId(responseData);
+            return { success: true, playerBuildingId };
         } catch (error) {
             console.error('Error sending building to backend:', error);
-            return false;
+            return { success: false, playerBuildingId: null };
         }
     }
 
@@ -250,22 +265,32 @@ export class PlayerBuildingsService {
         const placedBuilding = this.scene.add.image(isoCoords.isoX, isoCoords.isoY, 'casa');
         placedBuilding.setOrigin(0.5, 1);
         placedBuilding.setDepth(isoCoords.isoY);
+        const placedBuildingLabel = this.scene.add.text(isoCoords.isoX, isoCoords.isoY - this.BUILDING_LABEL_OFFSET_Y, this.currentBuildingName, {
+            fontSize: '12px',
+            color: '#ffffff',
+            backgroundColor: '#000000',
+            padding: { x: 3, y: 2 },
+        });
+        placedBuildingLabel.setOrigin(0.5, 1);
+        placedBuildingLabel.setDepth(isoCoords.isoY + 1);
         this.worldLayer.getLayer().add(placedBuilding);
+        this.worldLayer.getLayer().add(placedBuildingLabel);
 
         // Send POST request to backend
-        const success = await this.sendBuildingToBackend(tilePos.x, tilePos.y);
+        const result = await this.sendBuildingToBackend(tilePos.x, tilePos.y);
 
-        if (!success) {
+        if (!result.success) {
             // Remove the building if backend rejected it
             placedBuilding.destroy();
+            placedBuildingLabel.destroy();
         } else {
             // Add the building to the WorldLayer's playerBuildings list
             // This prevents overlap checking from allowing placement on the same spot
-            const newPlayerBuilding = {
-                id: Date.now(), // Temporary ID
+            const newPlayerBuilding: PlayerBuilding = {
+                id: result.playerBuildingId ?? this.nextTemporaryBuildingId--,
                 building: {
                     id: this.currentBuildingId,
-                    name: 'Building',
+                    name: this.currentBuildingName,
                     image_url: '',
                     description: '',
                     width: this.currentBuildingWidth,
@@ -275,6 +300,9 @@ export class PlayerBuildingsService {
                 level: 1,
                 x: tilePos.x,
                 y: tilePos.y,
+                isTemporary: result.playerBuildingId === null,
+                renderedBuildingImage: placedBuilding,
+                renderedBuildingLabel: placedBuildingLabel,
             };
 
             this.scene.registry.get("playerBuildings")?.push(newPlayerBuilding);
@@ -287,7 +315,65 @@ export class PlayerBuildingsService {
     private startBuildingPlacement(building: BuildingData): void {
         this.buildingPlacementMode = true;
         this.currentBuildingId = building.id;
+        this.currentBuildingName = building.name;
         this.currentBuildingWidth = building.width;
         this.currentBuildingHeight = building.length;
+    }
+
+    private async removeBuildingAtMouse(): Promise<void> {
+        const worldPoint = this.worldCamera.getWorldPoint(
+            this.scene.input.activePointer.x,
+            this.scene.input.activePointer.y
+        );
+        const tilePos = this.worldToTile(worldPoint.x, worldPoint.y);
+
+        const playerBuildings: PlayerBuilding[] = this.scene.registry.get("playerBuildings") || [];
+        const targetBuilding = playerBuildings.find((building) => this.isPointerOverBuilding(tilePos.x, tilePos.y, building));
+
+        if (!targetBuilding) {
+            return;
+        }
+
+        if (targetBuilding.isTemporary) {
+            this.scene.events.emit('showErrorMessage', 'Building is not synced yet. Reload and try again.');
+            return;
+        }
+
+        const deleted = await BuildingService.deletePlayerBuilding(targetBuilding.id);
+        if (!deleted) {
+            this.scene.events.emit('showErrorMessage', 'Failed to delete building.');
+            return;
+        }
+
+        targetBuilding.renderedBuildingImage?.destroy();
+        targetBuilding.renderedBuildingLabel?.destroy();
+
+        const updatedPlayerBuildings = playerBuildings.filter((building) => building.id !== targetBuilding.id);
+        this.scene.registry.set("playerBuildings", updatedPlayerBuildings);
+    }
+
+    private isPointerOverBuilding(tileX: number, tileY: number, building: PlayerBuilding): boolean {
+        return tileX >= building.x &&
+            tileX < building.x + building.building.width &&
+            tileY >= building.y &&
+            tileY < building.y + building.building.length;
+    }
+
+    private extractPlayerBuildingId(responseData: unknown): number | null {
+        if (!responseData || typeof responseData !== 'object') {
+            return null;
+        }
+
+        const responseObject = responseData as Record<string, unknown>;
+        const possibleIdFields = ['player_building_id', 'playerBuildingId', 'id'];
+
+        for (const field of possibleIdFields) {
+            const value = responseObject[field];
+            if (typeof value === 'number') {
+                return value;
+            }
+        }
+
+        return null;
     }
 }

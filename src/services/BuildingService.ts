@@ -43,4 +43,23 @@ export class BuildingService {
             return [];
         }
     }
+
+    static async deletePlayerBuilding(playerBuildingId: number): Promise<boolean> {
+        try {
+            const response = await fetch(`${CONFIG.backendUrl}/game/delete_building/${playerBuildingId}`, {
+                method: 'DELETE',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to delete player building: ${response.statusText}`);
+            }
+
+            return true;
+        } catch (error) {
+            console.error('Error deleting player building:', error);
+            return false;
+        }
+    }
 }
