@@ -29,10 +29,6 @@ export class PlayerBuildingsService {
     public buildingPlacementMode = false;
     public buildingRemoveMode = false;
 
-    // Counter for assigning unique temporary IDs to locally-placed buildings.
-    // These IDs are replaced by real backend IDs after a page reload.
-    private static nextTempId = -1;
-
     // Building overlay constants
     private OVERLAY_OFFSET_Y = 16;
     private OVERLAY_WIDTH = 48;
@@ -194,12 +190,12 @@ export class PlayerBuildingsService {
         }
     }
 
-    private async sendBuildingToBackend(x: number, y: number): Promise<boolean> {
+    private async sendBuildingToBackend(x: number, y: number): Promise<number | null> {
         try {
             const mapId = this.worldLayer.mapService?.getMapId();
             if (!mapId) {
                 console.error('Map ID is null or undefined.');
-                return false;
+                return null;
             }
 
             const response = await fetch(`${CONFIG.backendUrl}/game/add_building`, {
@@ -217,10 +213,20 @@ export class PlayerBuildingsService {
                 }),
             });
 
-            return response.ok;
+            if (!response.ok) {
+                return null;
+            }
+
+            const data = await response.json() as { id?: number; player_building_id?: number };
+            const id = data.id ?? data.player_building_id;
+            if (id === undefined) {
+                console.error('Backend response did not include a building ID.');
+                return null;
+            }
+            return id;
         } catch (error) {
             console.error('Error sending building to backend:', error);
-            return false;
+            return null;
         }
     }
 
@@ -303,12 +309,12 @@ export class PlayerBuildingsService {
         const tilePos = this.worldToTile(worldPoint.x, worldPoint.y);
 
         // Send POST request to backend
-        const success = await this.sendBuildingToBackend(tilePos.x, tilePos.y);
+        const newBuildingId = await this.sendBuildingToBackend(tilePos.x, tilePos.y);
 
-        if (success) {
-            // Build the new player building record
+        if (newBuildingId !== null) {
+            // Build the new player building record using the real ID from the backend
             const newPlayerBuilding: PlayerBuilding = {
-                id: PlayerBuildingsService.nextTempId--, // Negative temp ID; real ID assigned after reload
+                id: newBuildingId,
                 building: {
                     id: this.currentBuildingId,
                     name: this.currentBuildingName,
