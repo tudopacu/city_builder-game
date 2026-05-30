@@ -217,6 +217,7 @@ export class PlayerBuildingsService {
                 return null;
             }
 
+            // Support both `id` and `player_building_id` field names from the backend.
             const data = await response.json() as { id?: number; player_building_id?: number };
             const id = data.id ?? data.player_building_id;
             if (id === undefined) {
