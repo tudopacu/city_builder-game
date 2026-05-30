@@ -42,15 +42,21 @@ export class GameScene extends Phaser.Scene {
     this.playerBuildingsService = new PlayerBuildingsService(this, this.player, this.worldLayer, this.worldCamera);
   }
 
-  private setupCameraControls(): void {
+    private setupCameraControls(): void {
     // Enable camera drag with mouse
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (this.playerBuildingsService?.buildingPlacementMode ||
+          this.playerBuildingsService?.buildingRemoveMode) {
+        return;
+      }
       this.cameraDragStartX = pointer.x;
       this.cameraDragStartY = pointer.y;
     });
 
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      if (pointer.isDown) {
+      if (pointer.isDown &&
+          !this.playerBuildingsService?.buildingPlacementMode &&
+          !this.playerBuildingsService?.buildingRemoveMode) {
         const deltaX = pointer.x - this.cameraDragStartX;
         const deltaY = pointer.y - this.cameraDragStartY;
 
