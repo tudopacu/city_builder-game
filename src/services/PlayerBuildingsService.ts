@@ -29,6 +29,11 @@ export class PlayerBuildingsService {
     public buildingPlacementMode = false;
     public buildingRemoveMode = false;
 
+    // Counter for assigning unique temporary IDs to locally-placed buildings
+    // whose backend response did not include a real ID.
+    // These IDs are replaced by real backend IDs after a page reload.
+    private static nextTempId = -1;
+
     // Building overlay constants
     private OVERLAY_OFFSET_Y = 16;
     private OVERLAY_WIDTH = 48;
@@ -122,6 +127,14 @@ export class PlayerBuildingsService {
     }
 
     private async removeBuilding(playerBuilding: PlayerBuilding): Promise<void> {
+        if (playerBuilding.id < 0) {
+            // Building has a temporary local ID — the real backend ID is not yet known.
+            // Reload the page to sync with the backend before trying to remove.
+            console.error(`Cannot remove building with temporary ID ${playerBuilding.id}. Reload the page to sync.`);
+            this.exitBuildingRemoveMode();
+            return;
+        }
+
         // Transactional: call backend first; only update local state on success
         const success = await BuildingService.removePlayerBuilding(playerBuilding.id);
 
@@ -221,8 +234,10 @@ export class PlayerBuildingsService {
             const data = await response.json() as { id?: number; player_building_id?: number };
             const id = data.id ?? data.player_building_id;
             if (id === undefined) {
-                console.error('Backend response did not include a building ID.');
-                return null;
+                // Backend saved the building but didn't return an ID; assign a local
+                // temporary ID so the building is rendered immediately. The real ID will
+                // be available after a page reload.
+                return PlayerBuildingsService.nextTempId--;
             }
             return id;
         } catch (error) {
