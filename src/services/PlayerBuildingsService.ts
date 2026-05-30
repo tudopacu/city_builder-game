@@ -29,6 +29,10 @@ export class PlayerBuildingsService {
     public buildingPlacementMode = false;
     public buildingRemoveMode = false;
 
+    // Counter for assigning unique temporary IDs to locally-placed buildings.
+    // These IDs are replaced by real backend IDs after a page reload.
+    private static nextTempId = -1;
+
     // Building overlay constants
     private OVERLAY_OFFSET_Y = 16;
     private OVERLAY_WIDTH = 48;
@@ -304,7 +308,7 @@ export class PlayerBuildingsService {
         if (success) {
             // Build the new player building record
             const newPlayerBuilding: PlayerBuilding = {
-                id: Date.now(), // Temporary ID until page reload retrieves the real one
+                id: PlayerBuildingsService.nextTempId--, // Negative temp ID; real ID assigned after reload
                 building: {
                     id: this.currentBuildingId,
                     name: this.currentBuildingName,
