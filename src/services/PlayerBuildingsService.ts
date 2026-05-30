@@ -127,7 +127,7 @@ export class PlayerBuildingsService {
     }
 
     private async removeBuilding(playerBuilding: PlayerBuilding): Promise<void> {
-        if (playerBuilding.id < 0) {
+        if (!Number.isFinite(playerBuilding.id) || playerBuilding.id <= 0) {
             // Building has a temporary local ID — the real backend ID is not yet known.
             // Reload the page to sync with the backend before trying to remove.
             console.error(`Cannot remove building with temporary ID ${playerBuilding.id}. Reload the page to sync.`);
@@ -233,7 +233,7 @@ export class PlayerBuildingsService {
             // Support both `id` and `player_building_id` field names from the backend.
             const data = await response.json() as { id?: number; player_building_id?: number };
             const id = data.id ?? data.player_building_id;
-            if (id === undefined) {
+            if (id === undefined || id === null) {
                 // Backend saved the building but didn't return an ID; assign a local
                 // temporary ID so the building is rendered immediately. The real ID will
                 // be available after a page reload.
