@@ -51,7 +51,22 @@ export class MainMenuService {
             }
         );
 
-        this.hudLayer.getLayer().add([...buildButton, ...worldMapButton]);
+        // Remove button
+        const removeButtonX = worldMapButtonX + buttonWidth + buttonSpacing;
+        const removeButton = this.createButton(
+            removeButtonX,
+            bottomY,
+            buttonWidth,
+            buttonHeight,
+            'Remove',
+            0x8b0000,
+            0xcc0000,
+            () => {
+                this.scene.events.emit('removeButtonClicked');
+            }
+        );
+
+        this.hudLayer.getLayer().add([...buildButton, ...worldMapButton, ...removeButton]);
     }
 
     private createButton(

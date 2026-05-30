@@ -3,8 +3,14 @@ import {IsometricService} from "./IsometricService";
 
 const BUILDING_LABEL_OFFSET_Y = 10;
 
+interface BuildingObjects {
+    image: Phaser.GameObjects.Image;
+    label: Phaser.GameObjects.Text;
+}
+
 export class RenderService {
 
+    private buildingObjects: Map<number, BuildingObjects> = new Map();
 
     constructor(
         private scene: Phaser.Scene,
@@ -17,7 +23,8 @@ export class RenderService {
             this.renderBuilding(playerBuilding);
         });
     }
-    private renderBuilding(playerBuilding: PlayerBuilding): void {
+
+    public renderBuilding(playerBuilding: PlayerBuilding): void {
         // Calculate isometric position based on building coordinates
         const { isoX, isoY } = IsometricService.toIsometricCoordinates(playerBuilding.x, playerBuilding.y);
 
@@ -36,6 +43,22 @@ export class RenderService {
         text.setOrigin(0.5, 1);
         text.setDepth(isoY + 1); // Ensure the label is above the building
 
+        // Make interactive so it can be clicked for removal
+        buildingImage.setInteractive();
+        buildingImage.on('pointerdown', () => {
+            this.scene.events.emit('buildingClicked', playerBuilding);
+        });
+
         this.layer.add([buildingImage, text]);
+        this.buildingObjects.set(playerBuilding.id, { image: buildingImage, label: text });
+    }
+
+    public removeBuildingObjects(id: number): void {
+        const objects = this.buildingObjects.get(id);
+        if (objects) {
+            objects.image.destroy();
+            objects.label.destroy();
+            this.buildingObjects.delete(id);
+        }
     }
 }

@@ -7,6 +7,15 @@ import {Map} from "../models/Map";
 import {WorldLayer} from "../layers/WorldLayer";
 import Camera = Phaser.Cameras.Scene2D.Camera;
 import {BuildingData} from "../dto/getBuildingsResponse";
+import {PlayerBuilding} from "../models/PlayerBuilding";
+import {BuildingService} from "./BuildingService";
+
+// SVG data URL for a red X cursor (32x32, hotspot at center 16,16)
+const REMOVE_CURSOR =
+    `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E` +
+    `%3Cline x1='4' y1='4' x2='28' y2='28' stroke='%23ff0000' stroke-width='3' stroke-linecap='round'/%3E` +
+    `%3Cline x1='28' y1='4' x2='4' y2='28' stroke='%23ff0000' stroke-width='3' stroke-linecap='round'/%3E` +
+    `%3C/svg%3E") 16 16, crosshair`;
 
 export class PlayerBuildingsService {
 
@@ -14,9 +23,15 @@ export class PlayerBuildingsService {
     private buildingOverlay: Phaser.GameObjects.Rectangle | null = null;
     private isValidPlacement = false;
     private currentBuildingId = 1;
+    private currentBuildingName = '';
     private currentBuildingWidth = 1;
     private currentBuildingHeight = 1;
     public buildingPlacementMode = false;
+    public buildingRemoveMode = false;
+
+    // Counter for assigning unique temporary IDs to locally-placed buildings.
+    // These IDs are replaced by real backend IDs after a page reload.
+    private static nextTempId = -1;
 
     // Building overlay constants
     private OVERLAY_OFFSET_Y = 16;
@@ -39,6 +54,9 @@ export class PlayerBuildingsService {
             if (this.buildingPlacementMode) {
                 this.exitBuildingPlacementMode();
             }
+            if (this.buildingRemoveMode) {
+                this.exitBuildingRemoveMode();
+            }
         });
 
         this.scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
@@ -57,6 +75,16 @@ export class PlayerBuildingsService {
         this.scene.events.on('startBuildingPlacementEvent', (building: BuildingData) => {
             this.startBuildingPlacement(building);
         });
+
+        this.scene.events.on('removeButtonClicked', () => {
+            this.enterBuildingRemoveMode();
+        });
+
+        this.scene.events.on('buildingClicked', (playerBuilding: PlayerBuilding) => {
+            if (this.buildingRemoveMode) {
+                void this.removeBuilding(playerBuilding);
+            }
+        });
     }
 
     private placeBuilding(pointer: Phaser.Input.Pointer, input: Phaser.Input.InputPlugin): void {
@@ -65,7 +93,7 @@ export class PlayerBuildingsService {
             if (!this.buildingPreview) {
                 return;
             }
-            this.placeBuildingAtMouse(input);
+            void this.placeBuildingAtMouse(input);
         } else if (pointer.rightButtonDown()) {
             // Right-click cancels building placement
             this.exitBuildingPlacementMode();
@@ -85,6 +113,35 @@ export class PlayerBuildingsService {
             this.buildingOverlay.destroy();
             this.buildingOverlay = null;
         }
+    }
+
+    private enterBuildingRemoveMode(): void {
+        this.buildingRemoveMode = true;
+        this.scene.input.setDefaultCursor(REMOVE_CURSOR);
+    }
+
+    private exitBuildingRemoveMode(): void {
+        this.buildingRemoveMode = false;
+        this.scene.input.setDefaultCursor('default');
+    }
+
+    private async removeBuilding(playerBuilding: PlayerBuilding): Promise<void> {
+        // Transactional: call backend first; only update local state on success
+        const success = await BuildingService.removePlayerBuilding(playerBuilding.id);
+
+        if (success) {
+            // Remove from the layer
+            this.worldLayer.renderService?.removeBuildingObjects(playerBuilding.id);
+
+            // Remove from the playerBuildings registry
+            const playerBuildings: PlayerBuilding[] = this.scene.registry.get("playerBuildings") || [];
+            const updated = playerBuildings.filter(b => b.id !== playerBuilding.id);
+            this.scene.registry.set("playerBuildings", updated);
+        } else {
+            console.error(`Failed to remove building ${playerBuilding.id} from backend.`);
+        }
+
+        this.exitBuildingRemoveMode();
     }
 
     private updateBuildingPreview(pointer: Phaser.Input.Pointer): void {
@@ -245,27 +302,16 @@ export class PlayerBuildingsService {
         );
         const tilePos = this.worldToTile(worldPoint.x, worldPoint.y);
 
-        // Create the building sprite at the placement position
-        const isoCoords = IsometricService.toIsometricCoordinates(tilePos.x, tilePos.y);
-        const placedBuilding = this.scene.add.image(isoCoords.isoX, isoCoords.isoY, 'casa');
-        placedBuilding.setOrigin(0.5, 1);
-        placedBuilding.setDepth(isoCoords.isoY);
-        this.worldLayer.getLayer().add(placedBuilding);
-
         // Send POST request to backend
         const success = await this.sendBuildingToBackend(tilePos.x, tilePos.y);
 
-        if (!success) {
-            // Remove the building if backend rejected it
-            placedBuilding.destroy();
-        } else {
-            // Add the building to the WorldLayer's playerBuildings list
-            // This prevents overlap checking from allowing placement on the same spot
-            const newPlayerBuilding = {
-                id: Date.now(), // Temporary ID
+        if (success) {
+            // Build the new player building record
+            const newPlayerBuilding: PlayerBuilding = {
+                id: PlayerBuildingsService.nextTempId--, // Negative temp ID; real ID assigned after reload
                 building: {
                     id: this.currentBuildingId,
-                    name: 'Building',
+                    name: this.currentBuildingName,
                     image_url: '',
                     description: '',
                     width: this.currentBuildingWidth,
@@ -277,7 +323,11 @@ export class PlayerBuildingsService {
                 y: tilePos.y,
             };
 
+            // Register in registry so overlap checking is aware of the new building
             this.scene.registry.get("playerBuildings")?.push(newPlayerBuilding);
+
+            // Render via RenderService so the building is tracked and interactive
+            this.worldLayer.renderService?.renderBuilding(newPlayerBuilding);
         }
 
         // Exit placement mode
@@ -287,6 +337,7 @@ export class PlayerBuildingsService {
     private startBuildingPlacement(building: BuildingData): void {
         this.buildingPlacementMode = true;
         this.currentBuildingId = building.id;
+        this.currentBuildingName = building.name;
         this.currentBuildingWidth = building.width;
         this.currentBuildingHeight = building.length;
     }
