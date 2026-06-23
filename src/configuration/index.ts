@@ -1,3 +1,3 @@
 export const CONFIG = {
-    backendUrl: 'http://localhost:5000',
+    backendUrl: 'http://citybuilder.home.ro:8081',
 }
