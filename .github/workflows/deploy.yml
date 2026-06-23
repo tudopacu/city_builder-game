@@ -1,0 +1,48 @@
+name: Deploy Phaser 3 Game
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          clean: true
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          no-cache: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Deploy to K8s Cluster
+        run: |
+          # 1. Update any cluster core infrastructure patterns
+          kubectl apply -f ~/k8s/phaser-game.yaml
+          
+          # 2. Terminate old container to explicitly free up physical hostPort 8083
+          kubectl scale deployment phaser-game-deployment --replicas=0
+          
+          # 3. Scale back up to fetch and host the updated build cleanly
+          kubectl scale deployment phaser-game-deployment --replicas=1
