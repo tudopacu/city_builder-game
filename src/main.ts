@@ -2,13 +2,15 @@ import Phaser from 'phaser';
 import { GameScene } from './scenes/GameScene';
 import { GameConfig } from './types';
 import {Player} from "./models/Player";
+import {CONFIG} from "./configuration";
 
 /**
  * Initialize and start the city builder game
  * @param config Game configuration including player info and auth cookie
  */
 export function startGame(config: GameConfig): Phaser.Game {
-  const { player, backendUrl = 'http://localhost:5000/game' } = config;
+  const {player, backendUrl = CONFIG.backendUrl + '/game'} = config;
+
 
   console.log('Starting City Builder Game...');
   console.log(`Player: ${player.username} (ID: ${player.id})`);
@@ -28,7 +30,7 @@ export function startGame(config: GameConfig): Phaser.Game {
     physics: {
       default: 'arcade',
       arcade: {
-        gravity: { x: 0, y: 0 },
+        gravity: {x: 0, y: 0},
         debug: false,
       },
     },
@@ -72,7 +74,7 @@ declare global {
     const demoConfig: GameConfig = {
       player: player,
       authCookie: token as string,
-      backendUrl: 'http://localhost:5000/game',
+      backendUrl: CONFIG.backendUrl + '/game',
     };
 
     startGame(demoConfig);
