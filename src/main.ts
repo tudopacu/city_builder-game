@@ -70,13 +70,11 @@ declare global {
 
   window.startCityBuilderGame = startGame;
 
-  if (process.env.NODE_ENV !== 'production') {
-    const demoConfig: GameConfig = {
-      player: player,
-      authCookie: token as string,
-      backendUrl: CONFIG.backendUrl + '/game',
-    };
+  const demoConfig: GameConfig = {
+    player: player,
+    authCookie: token as string,
+    backendUrl: CONFIG.backendUrl + '/game',
+  };
 
-    startGame(demoConfig);
-  }
+  startGame(demoConfig);
 })();
