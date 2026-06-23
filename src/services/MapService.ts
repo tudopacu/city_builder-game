@@ -65,6 +65,11 @@ export class MapService {
             return;
         }
 
+        const centerTileX = (this.map.width - 1) / 2;
+        const centerTileY = (this.map.length - 1) / 2;
+        const { isoX: centerIsoX, isoY: centerIsoY } = IsometricService.toIsometricCoordinates(centerTileX, centerTileY);
+        this.scene.cameras.main.centerOn(centerIsoX, centerIsoY);
+
         terrains.forEach(tile => {
             const { isoX, isoY } = IsometricService.toIsometricCoordinates(tile.x, tile.y);
 
