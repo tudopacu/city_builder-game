@@ -34,15 +34,14 @@ jobs:
           context: .
           push: true
           no-cache: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          # TAG REFACTOR: Swapped static :latest with the unique commit SHA
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
-      - name: Deploy to K8s Cluster
-        run: |
-          # 1. Update any cluster core infrastructure patterns
-          kubectl apply -f ~/k8s/phaser-game.yaml
-          
-          # 2. Terminate old container to explicitly free up physical hostPort 8083
-          kubectl scale deployment phaser-game-deployment --replicas=0
-          
-          # 3. Scale back up to fetch and host the updated build cleanly
-          kubectl scale deployment phaser-game-deployment --replicas=1
+      # REFACTOR: Handoff cluster coordination directly to the infrastructure repository
+      - name: Notify Infrastructure Repo of New Image
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.INFRA_PAT }}
+          repository: tudopacu/city_builder-infrastructure
+          event-type: update-image
+          client-payload: '{"app": "phaser-game", "image": "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"}'
