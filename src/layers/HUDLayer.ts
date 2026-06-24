@@ -27,7 +27,7 @@ export class HUDLayer {
   }
 
   private createPlayerInfo(): void {
-    const text = this.scene.add.text(10, 10, `Player: ${this.player.username}`, {
+    const text = this.scene.add.text(10, 10, `Player2: ${this.player.username}`, {
       fontSize: '16px',
       color: '#ffffff',
       backgroundColor: '#000000',

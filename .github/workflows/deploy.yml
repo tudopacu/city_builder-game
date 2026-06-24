@@ -34,10 +34,8 @@ jobs:
           context: .
           push: true
           no-cache: true
-          # TAG REFACTOR: Swapped static :latest with the unique commit SHA
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
-      # REFACTOR: Handoff cluster coordination directly to the infrastructure repository
       - name: Notify Infrastructure Repo of New Image
         uses: peter-evans/repository-dispatch@v3
         with:
