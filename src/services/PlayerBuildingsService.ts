@@ -3,7 +3,7 @@ import {CONFIG} from "../configuration";
 import {IsometricService} from "./IsometricService";
 import {Player} from "../models/Player";
 import {HALF_H, HALF_W} from "../constants/constants";
-import {Map} from "../models/Map";
+import {GameMap} from "../models/GameMap";
 import {WorldLayer} from "../layers/WorldLayer";
 import Camera = Phaser.Cameras.Scene2D.Camera;
 import {BuildingData} from "../dto/getBuildingsResponse";
@@ -40,8 +40,8 @@ export class PlayerBuildingsService {
     private OVERLAY_ALPHA = 0.4;
     private PREVIEW_ALPHA = 0.7;
 
-    private get map(): Map | null {
-        return this.worldLayer.mapService?.getMap() || null;
+    private get map(): GameMap | null {
+        return this.scene.registry.get("map") || [];
     }
 
     constructor(
@@ -131,7 +131,7 @@ export class PlayerBuildingsService {
 
         if (success) {
             // Remove from the layer
-            this.worldLayer.renderService?.removeBuildingObjects(playerBuilding.id);
+            this.worldLayer.buildingRenderer?.removeBuildingObjects(playerBuilding.id);
 
             // Remove from the playerBuildings registry
             const playerBuildings: PlayerBuilding[] = this.scene.registry.get("playerBuildings") || [];
@@ -196,7 +196,7 @@ export class PlayerBuildingsService {
 
     private async sendBuildingToBackend(x: number, y: number): Promise<boolean> {
         try {
-            const mapId = this.worldLayer.mapService?.getMapId();
+            const mapId = this.map?.id;
             if (!mapId) {
                 console.error('Map ID is null or undefined.');
                 return false;
@@ -327,7 +327,7 @@ export class PlayerBuildingsService {
             this.scene.registry.get("playerBuildings")?.push(newPlayerBuilding);
 
             // Render via RenderService so the building is tracked and interactive
-            this.worldLayer.renderService?.renderBuilding(newPlayerBuilding);
+            this.worldLayer.buildingRenderer?.renderBuilding(newPlayerBuilding);
         }
 
         // Exit placement mode

@@ -1,6 +1,6 @@
 import {Tile} from "./Tile";
 
-export interface Map {
+export interface GameMap {
     id: number;
     width: number;
     length: number;

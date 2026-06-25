@@ -6,4 +6,5 @@ export interface Tile {
     walkable: boolean;
     set_x: number;
     set_y: number;
+    player_building_id: number | null;
 }

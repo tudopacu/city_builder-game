@@ -64,17 +64,18 @@ declare global {
     player = await Player.getPlayer();
   } catch (error) {
     console.warn('Failed to fetch player from backend, using demo player:', error);
+    //todo: remove fallback
     // Fallback to demo player for development
     player = new Player(123, 'DemoPlayer');
   }
 
   window.startCityBuilderGame = startGame;
 
-  const demoConfig: GameConfig = {
+  const config: GameConfig = {
     player: player,
     authCookie: token as string,
     backendUrl: CONFIG.backendUrl + '/game',
   };
 
-  startGame(demoConfig);
+  startGame(config);
 })();
