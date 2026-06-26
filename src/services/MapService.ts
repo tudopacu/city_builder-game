@@ -15,6 +15,7 @@ export class MapService {
     }
 
     tileClicked(tile: Tile) {
+        console.log(tile);
         if (tile.player_building_id !== null) {
             const playerBuildings: PlayerBuilding[] = this.scene.registry.get('playerBuildings') || [];
             const playerBuilding = playerBuildings.find(b => b.id === tile.player_building_id);
