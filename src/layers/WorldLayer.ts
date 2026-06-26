@@ -56,7 +56,7 @@ export class WorldLayer {
       frameHeight: TILE_HEIGHT,
     });
     //todo load building images dynamically based on building data from backend
-    this.scene.load.image('house', 'assets/casa.png');
+    this.scene.load.image('casa', 'assets/casa.png');
   }
 
   private async loadMap(): Promise<void> {
