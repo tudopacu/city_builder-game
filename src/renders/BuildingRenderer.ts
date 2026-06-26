@@ -40,11 +40,6 @@ export class BuildingRenderer {
         text.setOrigin(0.5, 1);
         text.setDepth(isoY + 1);
 
-        buildingImage.setInteractive();
-        buildingImage.on('pointerdown', () => {
-            this.scene.events.emit('buildingClicked', playerBuilding);
-        });
-
         this.layer.add([buildingImage, text]);
         this.buildingObjects.set(playerBuilding.id, { image: buildingImage, label: text });
     }

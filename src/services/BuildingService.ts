@@ -24,9 +24,9 @@ export class BuildingService {
         }
     }
 
-    static async getPlayerBuildings(): Promise<PlayerBuilding[]> {
+    static async getPlayerBuildings(playerId: number, mapId: number): Promise<PlayerBuilding[]> {
         try {
-            const response = await fetch(`${CONFIG.backendUrl}/game/get_player_buildings/2/1`, {
+            const response = await fetch(`${CONFIG.backendUrl}/game/get_player_buildings/${playerId}/${mapId}`, {
                 method: 'GET',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },

@@ -10,6 +10,7 @@ import {MapRenderer} from "../renders/MapRenderer";
 import {BuildingRenderer} from "../renders/BuildingRenderer";
 import {PlayerBuilding} from "../models/PlayerBuilding";
 import {GameMap} from "../models/GameMap";
+import {Player} from "../models/Player";
 
 const TILE_WIDTH = 64;
 const TILE_HEIGHT = 64;
@@ -22,7 +23,8 @@ export class WorldLayer {
   public buildingRenderer: BuildingRenderer | null = null;
 
   constructor(
-      private scene: Phaser.Scene
+      private scene: Phaser.Scene,
+      private player: Player,
   ) {}
 
   public getLayer(): Layer {
@@ -40,7 +42,9 @@ export class WorldLayer {
     await this.loadMap();
     await this.loadBuildings();
     await this.loadItems();
-    await this.loadPlayerBuildings();
+
+    const map: GameMap =  this.scene.registry.get("map");
+    await this.loadPlayerBuildings(this.player.id, map.id);
     await this.loadRoads();
 
     this.enrichMap();
@@ -71,8 +75,8 @@ export class WorldLayer {
     this.scene.registry.set("items",  await ItemService.getItems());
   }
 
-  private async loadPlayerBuildings(): Promise<void> {
-    this.scene.registry.set("playerBuildings",  await BuildingService.getPlayerBuildings());
+  private async loadPlayerBuildings(playerId: number, mapId: number): Promise<void> {
+    this.scene.registry.set("playerBuildings",  await BuildingService.getPlayerBuildings(playerId, mapId));
   }
 
   private async loadRoads(): Promise<void> {

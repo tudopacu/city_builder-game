@@ -23,7 +23,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   preload() {
-    this.worldLayer = new WorldLayer(this);
+    this.worldLayer = new WorldLayer(this, this.player);
     this.worldLayer.preload();
   }
 
