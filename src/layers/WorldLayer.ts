@@ -60,7 +60,7 @@ export class WorldLayer {
       frameHeight: TILE_HEIGHT,
     });
     //todo load building images dynamically based on building data from backend
-    this.scene.load.image('casa', 'assets/casa.png');
+    this.scene.load.image('house', 'assets/casa.png');
   }
 
   private async loadMap(): Promise<void> {
@@ -88,9 +88,21 @@ export class WorldLayer {
     const playerBuildings: PlayerBuilding[] = this.scene.registry.get("playerBuildings") || [];
 
     playerBuildings.forEach(playerBuilding => {
-      const tileIndex = map.terrains.findIndex(t => t.x === playerBuilding.x && t.y === playerBuilding.y);
-      if (tileIndex !== -1) {
-        map.terrains[tileIndex] = { ...map.terrains[tileIndex], player_building_id: playerBuilding.id };
+      for (let dx = 0; dx < playerBuilding.building.width; dx++) {
+        for (let dy = 0; dy < playerBuilding.building.length; dy++) {
+          const tileX = playerBuilding.x - dx;
+          const tileY = playerBuilding.y - dy;
+
+          if (tileX < 0 || tileY < 0) {
+            throw new Error(`Building at position (${playerBuilding.x}, ${playerBuilding.y}) extends into negative coordinates at (${tileX}, ${tileY})`);
+          }
+
+          const tileIndex = map.terrains.findIndex(t => t.x === tileX && t.y === tileY);
+
+          if (tileIndex !== -1) {
+            map.terrains[tileIndex] = { ...map.terrains[tileIndex], player_building_id: playerBuilding.id };
+          }
+        }
       }
     });
 

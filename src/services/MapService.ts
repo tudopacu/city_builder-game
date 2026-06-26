@@ -36,7 +36,8 @@ export class MapService {
             });
 
             if (!response.ok) {
-                throw new Error(`Failed to fetch map data: ${response.statusText}`);
+                console.error('Error fetching map data:', new Error(`Failed to fetch map data: ${response.statusText}`));
+                return undefined;
             }
 
             const data = await response.json();
