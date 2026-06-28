@@ -15,11 +15,14 @@ export class MapService {
     }
 
     tileClicked(tile: Tile) {
-        console.log(tile);
-        console.log(tile.player_building_id);
-        if (tile.player_building_id !== null) {
+        const map: GameMap | null = this.scene.registry.get("map") || null;
+        const latestTile = map?.terrains?.find(t => t.x === tile.x && t.y === tile.y) || tile;
+
+        console.log(latestTile);
+        console.log(latestTile.player_building_id);
+        if (latestTile.player_building_id !== null) {
             const playerBuildings: PlayerBuilding[] = this.scene.registry.get('playerBuildings') || [];
-            const playerBuilding = playerBuildings.find(b => b.id === tile.player_building_id);
+            const playerBuilding = playerBuildings.find(b => b.id === latestTile.player_building_id);
             if (playerBuilding) {
                 this.scene.events.emit('buildingClicked', playerBuilding);
             }
