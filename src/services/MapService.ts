@@ -15,8 +15,13 @@ export class MapService {
     }
 
     tileClicked(tile: Tile) {
-        const map: GameMap | null = this.scene.registry.get("map") || null;
-        const latestTile = map?.terrains?.find(t => t.x === tile.x && t.y === tile.y) || tile;
+        const map = this.scene.registry.get("map") as GameMap | undefined;
+        const latestTile = map?.terrains?.find(t => t.x === tile.x && t.y === tile.y);
+
+        if (!latestTile) {
+            console.warn(`Clicked tile (${tile.x}, ${tile.y}) was not found in the latest map registry.`);
+            return;
+        }
 
         console.log(latestTile);
         console.log(latestTile.player_building_id);
