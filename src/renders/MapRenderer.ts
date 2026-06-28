@@ -45,6 +45,7 @@ export class MapRenderer {
             const frameIndex = tile.set_y * tilesPerRow + tile.set_x;
 
             const tileImg = this.scene.add.image(isoX, isoY, TILE_SET_KEY, frameIndex);
+            tileImg.setData('tile', tile);
 
             tileImg.setCrop(CROP_X, CROP_Y, CROP_W, CROP_H);
             tileImg.setOrigin(0.5, 1);
@@ -59,7 +60,7 @@ export class MapRenderer {
 
             tileImg.setInteractive();
             tileImg.on('pointerdown', () => {
-                this.scene.events.emit('tileClicked', tile);
+                this.scene.events.emit('tileClicked', tileImg.getData('tile'));
             });
 
             this.layer.add([tileImg, label]);

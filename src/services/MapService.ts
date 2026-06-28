@@ -15,19 +15,11 @@ export class MapService {
     }
 
     tileClicked(tile: Tile) {
-        const map = this.scene.registry.get("map") as GameMap | undefined;
-        const latestTile = map?.terrains?.find(t => t.x === tile.x && t.y === tile.y);
-
-        if (!latestTile) {
-            console.warn(`Clicked tile (${tile.x}, ${tile.y}) was not found in the latest map registry.`);
-            return;
-        }
-
-        console.log(latestTile);
-        console.log(latestTile.player_building_id);
-        if (latestTile.player_building_id !== null) {
+        console.log(tile);
+        console.log(tile.player_building_id);
+        if (tile.player_building_id !== null) {
             const playerBuildings: PlayerBuilding[] = this.scene.registry.get('playerBuildings') || [];
-            const playerBuilding = playerBuildings.find(b => b.id === latestTile.player_building_id);
+            const playerBuilding = playerBuildings.find(b => b.id === tile.player_building_id);
             if (playerBuilding) {
                 this.scene.events.emit('buildingClicked', playerBuilding);
             }
