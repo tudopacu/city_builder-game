@@ -45,6 +45,11 @@ export class BuildingService {
     }
 
     static async removePlayerBuilding(playerBuildingId: number): Promise<boolean> {
+        if (!Number.isFinite(playerBuildingId) || playerBuildingId <= 0) {
+            console.error(`Invalid player building ID for removal: ${playerBuildingId}`);
+            return false;
+        }
+
         try {
             const response = await fetch(`${CONFIG.backendUrl}/game/remove_player_building/${playerBuildingId}`, {
                 method: 'DELETE',
