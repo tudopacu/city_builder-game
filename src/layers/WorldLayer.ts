@@ -39,15 +39,14 @@ export class WorldLayer {
   }
 
   public async initialize(): Promise<void> {
-    await this.loadMap();
+
     await this.loadBuildings();
     await this.loadItems();
 
-    const map: GameMap =  this.scene.registry.get("map");
-    await this.loadPlayerBuildings(this.player.id, map.id);
+    await this.loadPlayerBuildings(this.player.id, 1);
     await this.loadRoads();
 
-    this.enrichMap();
+    await this.loadMap();
 
     this.mapRenderer?.renderMap();
     this.buildingRenderer?.renderPlayerBuildings();
@@ -64,7 +63,13 @@ export class WorldLayer {
   }
 
   private async loadMap(): Promise<void> {
-    this.scene.registry.set("map",  await MapService.getMap());
+    let map: GameMap | undefined = await MapService.getMap();
+
+    if (!map) {
+      throw new Error("Map data is undefined");
+    }
+
+    this.enrichMap(map);
   }
 
   private async loadBuildings(): Promise<void> {
@@ -83,12 +88,19 @@ export class WorldLayer {
     this.scene.registry.set("roads", await RoadService.getRoads(2, 1));
   }
 
-  private enrichMap() {
-    const map: GameMap = this.scene.registry.get("map") || [];
+  private enrichMap(map: GameMap) {
     const playerBuildings: PlayerBuilding[] = this.scene.registry.get("playerBuildings") || [];
 
+    console.log ("Enriching map with player buildings:", playerBuildings);
+
     playerBuildings.forEach(playerBuilding => {
+      if (!playerBuilding.id) {
+        console.warn(`PlayerBuilding ID is undefined for building at (${playerBuilding.x}, ${playerBuilding.y})`);
+        return;
+      }
+
       for (let dx = 0; dx < playerBuilding.building.width; dx++) {
+        console.log (`Enriching map with playerBuilding ID ${playerBuilding.id} at (${playerBuilding.x}, ${playerBuilding.y}) with width ${playerBuilding.building.width} and length ${playerBuilding.building.length}`);
         for (let dy = 0; dy < playerBuilding.building.length; dy++) {
           const tileX = playerBuilding.x - dx;
           const tileY = playerBuilding.y - dy;
@@ -99,12 +111,23 @@ export class WorldLayer {
 
           const tileIndex = map.terrains.findIndex(t => t.x === tileX && t.y === tileY);
 
+          console.log ("aci");
+
+
           if (tileIndex !== -1) {
-            map.terrains[tileIndex] = { ...map.terrains[tileIndex], player_building_id: playerBuilding.id };
+            console.log(`Enriching terrain at (${tileX}, ${tileY}) with playerBuilding ID ${playerBuilding.id}`);
+            map.terrains[tileIndex] = {
+              ...map.terrains[tileIndex],
+              player_building_id: playerBuilding.id
+            };
+          } else {
+            console.warn(`No terrain found at (${tileX}, ${tileY}) to enrich with playerBuilding ID ${playerBuilding.id}`);
           }
         }
       }
     });
+
+    console.log("Enriched map with player buildings:", map);
 
     this.scene.registry.set("map", map);
   }
