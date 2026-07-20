@@ -80,9 +80,9 @@ export class PlayerBuildingsService {
             this.enterBuildingRemoveMode();
         });
 
-        this.scene.events.on('buildingClicked', (playerBuilding: PlayerBuilding) => {
+        this.scene.events.on('buildingClicked', (playerBuildingId: number) => {
             if (this.buildingRemoveMode) {
-                void this.removeBuilding(playerBuilding);
+                void this.removeBuilding(playerBuildingId);
             }
         });
     }
@@ -125,20 +125,20 @@ export class PlayerBuildingsService {
         this.scene.input.setDefaultCursor('default');
     }
 
-    private async removeBuilding(playerBuilding: PlayerBuilding): Promise<void> {
+    private async removeBuilding(playerBuildingId: number): Promise<void> {
         // Transactional: call backend first; only update local state on success
-        const success = await BuildingService.removePlayerBuilding(playerBuilding.id);
+        const success = await BuildingService.removePlayerBuilding(playerBuildingId);
 
         if (success) {
             // Remove from the layer
-            this.worldLayer.buildingRenderer?.removeBuildingObjects(playerBuilding.id);
+            this.worldLayer.buildingRenderer?.removeBuildingObjects(playerBuildingId);
 
             // Remove from the playerBuildings registry
             const playerBuildings: PlayerBuilding[] = this.scene.registry.get("playerBuildings") || [];
-            const updated = playerBuildings.filter(b => b.id !== playerBuilding.id);
+            const updated = playerBuildings.filter(b => b.id !== playerBuildingId);
             this.scene.registry.set("playerBuildings", updated);
         } else {
-            console.error(`Failed to remove building ${playerBuilding.id} from backend.`);
+            console.error(`Failed to remove building ${playerBuildingId} from backend.`);
         }
 
         this.exitBuildingRemoveMode();

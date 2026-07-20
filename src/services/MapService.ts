@@ -2,7 +2,6 @@ import { GameMap } from '../models/GameMap';
 import { CONFIG } from '../configuration';
 import Phaser from "phaser";
 import {Tile} from "../models/Tile";
-import {PlayerBuilding} from "../models/PlayerBuilding";
 
 export class MapService {
 
@@ -15,14 +14,8 @@ export class MapService {
     }
 
     tileClicked(tile: Tile) {
-        console.log(tile);
-        console.log(tile.player_building_id);
         if (tile.player_building_id !== null) {
-            const playerBuildings: PlayerBuilding[] = this.scene.registry.get('playerBuildings') || [];
-            const playerBuilding = playerBuildings.find(b => b.id === tile.player_building_id);
-            if (playerBuilding) {
-                this.scene.events.emit('buildingClicked', playerBuilding);
-            }
+            this.scene.events.emit('buildingClicked', tile.player_building_id);
         }
     }
 
