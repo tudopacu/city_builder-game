@@ -35,9 +35,11 @@ module.exports = {
     new webpack.DefinePlugin({
       // This handles the exact direct string replacements
       'process.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'http://localhost:8081'),
+      'process.env.VITE_CDN_URL': JSON.stringify(process.env.VITE_CDN_URL || 'http://localhost:8084/html'),
       // This acts as a safety net if your code tries to destruct or access process.env globally
       'process.env': JSON.stringify({
-        VITE_API_URL: process.env.VITE_API_URL || 'http://localhost:8081'
+        VITE_API_URL: process.env.VITE_API_URL || 'http://localhost:8081',
+        VITE_CDN_URL: process.env.VITE_CDN_URL || 'http://localhost:8084/html'
       })
     })
   ],

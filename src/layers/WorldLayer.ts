@@ -1,10 +1,10 @@
 import Phaser from 'phaser';
 import { MapService } from '../services/MapService';
+import { ImagePreloadingService } from '../services/ImagePreloadingService';
 import { BuildingService } from '../services/BuildingService';
 import { ItemService } from '../services/ItemService';
 import { RoadService } from '../services/RoadService';
 import Layer = Phaser.GameObjects.Layer;
-import {TILE_SET_KEY} from "../constants/constants";
 import {Item} from "../models/Item";
 import {MapRenderer} from "../renders/MapRenderer";
 import {BuildingRenderer} from "../renders/BuildingRenderer";
@@ -12,13 +12,11 @@ import {PlayerBuilding} from "../models/PlayerBuilding";
 import {GameMap} from "../models/GameMap";
 import {Player} from "../models/Player";
 
-const TILE_WIDTH = 64;
-const TILE_HEIGHT = 64;
-
 export class WorldLayer {
   private layer!: Layer;
   public items: Item[] = [];
   public mapService: MapService | null = null;
+  public imagePreloadingService: ImagePreloadingService | null = null;
   public mapRenderer: MapRenderer | null = null;
   public buildingRenderer: BuildingRenderer | null = null;
 
@@ -36,30 +34,30 @@ export class WorldLayer {
     this.mapService = new MapService(this.scene)
     this.mapRenderer = new MapRenderer(this.scene, this.layer)
     this.buildingRenderer = new BuildingRenderer(this.scene, this.layer)
+    this.imagePreloadingService = new ImagePreloadingService(this.scene);
   }
 
   public async initialize(): Promise<void> {
 
+    //todo: add loading screen
+    //load game data
     await this.loadBuildings();
     await this.loadItems();
-
-    await this.loadPlayerBuildings(this.player.id, 1);
-    await this.loadRoads();
-
     await this.loadMap();
 
-    this.mapRenderer?.renderMap();
-    this.buildingRenderer?.renderPlayerBuildings();
-  }
+    //load player data
+    await this.loadRoads();
+    await this.loadPlayerBuildings(this.player.id, 1);
 
-  public preload(): void {
-    //todo load tile set dynamically based on map data from backend
-    this.scene.load.spritesheet(TILE_SET_KEY, "assets/grass_and_water.png", {
-      frameWidth: TILE_WIDTH,
-      frameHeight: TILE_HEIGHT,
+    //loading assets
+    this.imagePreloadingService?.loadMap();
+    this.imagePreloadingService?.load();
+
+    //render game
+    this.scene.load.once('complete', () => {
+      this.mapRenderer?.renderMap();
+      this.buildingRenderer?.renderPlayerBuildings();
     });
-    //todo load building images dynamically based on building data from backend
-    this.scene.load.image('house', 'assets/casa.png');
   }
 
   private async loadMap(): Promise<void> {
@@ -91,8 +89,6 @@ export class WorldLayer {
   private enrichMap(map: GameMap) {
     const playerBuildings: PlayerBuilding[] = this.scene.registry.get("playerBuildings") || [];
 
-    console.log ("Enriching map with player buildings:", playerBuildings);
-
     playerBuildings.forEach(playerBuilding => {
       if (!playerBuilding.id) {
         console.warn(`PlayerBuilding ID is undefined for building at (${playerBuilding.x}, ${playerBuilding.y})`);
@@ -100,8 +96,7 @@ export class WorldLayer {
       }
 
       for (let dx = 0; dx < playerBuilding.building.width; dx++) {
-        console.log (`Enriching map with playerBuilding ID ${playerBuilding.id} at (${playerBuilding.x}, ${playerBuilding.y}) with width ${playerBuilding.building.width} and length ${playerBuilding.building.length}`);
-        for (let dy = 0; dy < playerBuilding.building.length; dy++) {
+         for (let dy = 0; dy < playerBuilding.building.length; dy++) {
           const tileX = playerBuilding.x - dx;
           const tileY = playerBuilding.y - dy;
 
@@ -111,11 +106,7 @@ export class WorldLayer {
 
           const tileIndex = map.terrains.findIndex(t => t.x === tileX && t.y === tileY);
 
-          console.log ("aci");
-
-
           if (tileIndex !== -1) {
-            console.log(`Enriching terrain at (${tileX}, ${tileY}) with playerBuilding ID ${playerBuilding.id}`);
             map.terrains[tileIndex] = {
               ...map.terrains[tileIndex],
               player_building_id: playerBuilding.id
@@ -127,8 +118,8 @@ export class WorldLayer {
       }
     });
 
-    console.log("Enriched map with player buildings:", map);
-
     this.scene.registry.set("map", map);
   }
+
+  public preload(): void {}
 }

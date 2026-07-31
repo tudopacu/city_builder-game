@@ -37,6 +37,7 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           build-args: |
             VITE_API_URL=http://citybuilder.home.ro:8081
+            VITE_CDN_URL=http://citybuilder.home.ro:8084
 
       - name: Notify Infrastructure Repo of New Image
         uses: peter-evans/repository-dispatch@v3

@@ -27,9 +27,9 @@ export class BuildingRenderer {
     public renderBuilding(playerBuilding: PlayerBuilding): void {
         const { isoX, isoY } = IsometricService.toIsometricCoordinates(playerBuilding.x, playerBuilding.y);
 
-        const buildingImage = this.scene.add.image(isoX, isoY, 'house');
+        const buildingImage = this.scene.add.image(isoX, isoY, 'building_' + playerBuilding.building.id);
         buildingImage.setOrigin(0.5, 1);
-        buildingImage.setDepth(isoY); // Set depth based on isoY for proper layering
+        buildingImage.setDepth(isoY);
 
         const text = this.scene.add.text(isoX, isoY - BUILDING_LABEL_OFFSET_Y, playerBuilding.building.name, {
             fontSize: '12px',

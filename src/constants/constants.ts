@@ -1,4 +1,4 @@
-export const TILE_SET_KEY = "terrain_tiles";
+export const TILE_SET_KEY = "map_1";
 const CROP_W = 64;
 const CROP_H = 64;
 

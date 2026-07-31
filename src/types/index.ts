@@ -8,5 +8,4 @@ import {Player} from "../models/Player";
 export interface GameConfig {
   player: Player;
   authCookie: string;
-  backendUrl?: string;
 }
