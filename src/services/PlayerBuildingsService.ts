@@ -156,7 +156,7 @@ export class PlayerBuildingsService {
 
         // Create or update building preview
         if (!this.buildingPreview) {
-            this.buildingPreview = this.scene.add.image(isoCoords.isoX, isoCoords.isoY, 'house');
+            this.buildingPreview = this.scene.add.image(isoCoords.isoX, isoCoords.isoY, 'building_' + this.currentBuildingId);
             this.buildingPreview.setOrigin(0.5, 1);
             this.buildingPreview.setAlpha(this.PREVIEW_ALPHA);
             this.buildingPreview.setDepth(10000); // High depth to always be on top
