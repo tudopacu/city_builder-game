@@ -58,4 +58,22 @@ export class BuildingService {
             return false;
         }
     }
+
+    static async startProduction(playerId: number, playerBuildingId: number, buildingProductionId: number): Promise<boolean> {
+        try {
+            const response = await fetch(
+                `${CONFIG.backendUrl}/game/start_production/${playerId}/${playerBuildingId}/${buildingProductionId}`,
+                {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                }
+            );
+
+            return response.ok;
+        } catch (error) {
+            console.error('Error starting production:', error);
+            return false;
+        }
+    }
 }
