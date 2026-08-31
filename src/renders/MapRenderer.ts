@@ -1,6 +1,7 @@
 import {IsometricService} from "../services/IsometricService";
 import {TILE_SET_KEY} from "../constants/constants";
 import {GameMap} from "../models/GameMap";
+import {Tile} from "../models/Tile";
 
 const RAW_W = 256;
 const CROP_X = 0;
@@ -59,7 +60,9 @@ export class MapRenderer {
 
             tileImg.setInteractive();
             tileImg.on('pointerdown', () => {
-                this.scene.events.emit('tileClicked', tile);
+                const liveMap: GameMap = this.scene.registry.get("map");
+                const liveTile: Tile = liveMap?.terrains.find(t => t.x === tile.x && t.y === tile.y) ?? tile;
+                this.scene.events.emit('tileClicked', liveTile);
             });
 
             this.layer.add([tileImg, label]);

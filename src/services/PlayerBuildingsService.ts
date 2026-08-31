@@ -135,8 +135,27 @@ export class PlayerBuildingsService {
 
             // Remove from the playerBuildings registry
             const playerBuildings: PlayerBuilding[] = this.scene.registry.get("playerBuildings") || [];
+            const removed = playerBuildings.find(b => b.id === playerBuildingId);
             const updated = playerBuildings.filter(b => b.id !== playerBuildingId);
             this.scene.registry.set("playerBuildings", updated);
+
+            // Clear player_building_id from the occupied tiles in the live map
+            const liveMap: GameMap | null = this.scene.registry.get("map");
+            if (liveMap && removed) {
+                for (let dx = 0; dx < removed.building.width; dx++) {
+                    for (let dy = 0; dy < removed.building.length; dy++) {
+                        const tileX = removed.x - dx;
+                        const tileY = removed.y - dy;
+                        const tileIndex = liveMap.terrains.findIndex(t => t.x === tileX && t.y === tileY);
+                        if (tileIndex !== -1) {
+                            liveMap.terrains[tileIndex] = {
+                                ...liveMap.terrains[tileIndex],
+                                player_building_id: null,
+                            };
+                        }
+                    }
+                }
+            }
         } else {
             console.error(`Failed to remove building ${playerBuildingId} from backend.`);
         }
@@ -325,6 +344,25 @@ export class PlayerBuildingsService {
 
             // Register in registry so overlap checking is aware of the new building
             this.scene.registry.get("playerBuildings")?.push(newPlayerBuilding);
+
+            // Stamp player_building_id onto the occupied tiles in the live map so
+            // click events can detect the building without a page reload.
+            const liveMap: GameMap | null = this.scene.registry.get("map");
+            if (liveMap) {
+                for (let dx = 0; dx < newPlayerBuilding.building.width; dx++) {
+                    for (let dy = 0; dy < newPlayerBuilding.building.length; dy++) {
+                        const tileX = newPlayerBuilding.x - dx;
+                        const tileY = newPlayerBuilding.y - dy;
+                        const tileIndex = liveMap.terrains.findIndex(t => t.x === tileX && t.y === tileY);
+                        if (tileIndex !== -1) {
+                            liveMap.terrains[tileIndex] = {
+                                ...liveMap.terrains[tileIndex],
+                                player_building_id: newPlayerBuilding.id,
+                            };
+                        }
+                    }
+                }
+            }
 
             // Render via RenderService so the building is tracked and interactive
             this.worldLayer.buildingRenderer?.renderBuilding(newPlayerBuilding);

@@ -43,11 +43,12 @@ export class WorldLayer {
     //load game data
     await this.loadBuildings();
     await this.loadItems();
-    await this.loadMap();
 
     //load player data
     await this.loadRoads();
     await this.loadPlayerBuildings(this.player.id, 1);
+
+    await this.loadMap();
 
     //loading assets
     this.imagePreloadingService?.loadMap();
