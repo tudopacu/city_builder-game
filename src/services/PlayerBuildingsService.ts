@@ -236,33 +236,17 @@ export class PlayerBuildingsService {
                 return null;
             }
 
-            const contentType = response.headers.get('content-type') || '';
-            if (contentType.includes('application/json')) {
-                const data = await response.json() as {
-                    player_building_id?: number;
-                    playerBuilding?: { id?: number };
-                    player_building?: { id?: number };
-                    id?: number;
-                };
+            const data = await response.json().catch(() => null) as {
+                player_building_id?: number;
+                player_building?: { id?: number };
+            } | null;
+            const createdId = data?.player_building_id ?? data?.player_building?.id;
 
-                const directId = data.player_building_id ?? data.playerBuilding?.id ?? data.player_building?.id ?? data.id;
-                if (typeof directId === 'number') {
-                    return directId;
-                }
+            if (typeof createdId === 'number') {
+                return createdId;
             }
 
-            const playerBuildings = await BuildingService.getPlayerBuildings(this.player.id, mapId);
-            const matchingBuilding = playerBuildings.find(playerBuilding =>
-                playerBuilding.x === x &&
-                playerBuilding.y === y &&
-                playerBuilding.building.id === this.currentBuildingId
-            );
-
-            if (matchingBuilding) {
-                return matchingBuilding.id;
-            }
-
-            console.error('Building was created but no backend player building ID could be resolved.');
+            console.error('Building was created but no backend player building ID was returned.');
             return null;
         } catch (error) {
             console.error('Error sending building to backend:', error);
