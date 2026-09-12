@@ -246,7 +246,7 @@ export class PlayerBuildingsService {
             } | null;
             const createdId = data?.player_building?.id;
 
-            if (typeof createdId === 'number') {
+            if (Number.isInteger(createdId) && createdId > 0) {
                 return createdId;
             }
 
