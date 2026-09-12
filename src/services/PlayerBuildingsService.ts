@@ -236,11 +236,15 @@ export class PlayerBuildingsService {
                 return null;
             }
 
+            if (response.status === 204) {
+                console.error('Add building response must include player_building.id, but received 204 No Content.');
+                return null;
+            }
+
             const data = await response.json().catch(() => null) as {
-                player_building_id?: number;
                 player_building?: { id?: number };
             } | null;
-            const createdId = data?.player_building_id ?? data?.player_building?.id;
+            const createdId = data?.player_building?.id;
 
             if (typeof createdId === 'number') {
                 return createdId;
