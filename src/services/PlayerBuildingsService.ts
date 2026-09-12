@@ -29,10 +29,6 @@ export class PlayerBuildingsService {
     public buildingPlacementMode = false;
     public buildingRemoveMode = false;
 
-    // Counter for assigning unique temporary IDs to locally-placed buildings.
-    // These IDs are replaced by real backend IDs after a page reload.
-    private static nextTempId = -1;
-
     // Building overlay constants
     private OVERLAY_OFFSET_Y = 16;
     private OVERLAY_WIDTH = 48;
@@ -213,12 +209,12 @@ export class PlayerBuildingsService {
         }
     }
 
-    private async sendBuildingToBackend(x: number, y: number): Promise<boolean> {
+    private async sendBuildingToBackend(x: number, y: number): Promise<number | null> {
         try {
             const mapId = this.map?.id;
             if (!mapId) {
                 console.error('Map ID is null or undefined.');
-                return false;
+                return null;
             }
 
             const response = await fetch(`${CONFIG.backendUrl}/game/add_building`, {
@@ -236,10 +232,41 @@ export class PlayerBuildingsService {
                 }),
             });
 
-            return response.ok;
+            if (!response.ok) {
+                return null;
+            }
+
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+                const data = await response.json() as {
+                    player_building_id?: number;
+                    playerBuilding?: { id?: number };
+                    player_building?: { id?: number };
+                    id?: number;
+                };
+
+                const directId = data.player_building_id ?? data.playerBuilding?.id ?? data.player_building?.id ?? data.id;
+                if (typeof directId === 'number') {
+                    return directId;
+                }
+            }
+
+            const playerBuildings = await BuildingService.getPlayerBuildings(this.player.id, mapId);
+            const matchingBuilding = playerBuildings.find(playerBuilding =>
+                playerBuilding.x === x &&
+                playerBuilding.y === y &&
+                playerBuilding.building.id === this.currentBuildingId
+            );
+
+            if (matchingBuilding) {
+                return matchingBuilding.id;
+            }
+
+            console.error('Building was created but no backend player building ID could be resolved.');
+            return null;
         } catch (error) {
             console.error('Error sending building to backend:', error);
-            return false;
+            return null;
         }
     }
 
@@ -322,12 +349,12 @@ export class PlayerBuildingsService {
         const tilePos = this.worldToTile(worldPoint.x, worldPoint.y);
 
         // Send POST request to backend
-        const success = await this.sendBuildingToBackend(tilePos.x, tilePos.y);
+        const createdPlayerBuildingId = await this.sendBuildingToBackend(tilePos.x, tilePos.y);
 
-        if (success) {
+        if (createdPlayerBuildingId !== null) {
             // Build the new player building record
             const newPlayerBuilding: PlayerBuilding = {
-                id: PlayerBuildingsService.nextTempId--, // Negative temp ID; real ID assigned after reload
+                id: createdPlayerBuildingId,
                 building: {
                     id: this.currentBuildingId,
                     name: this.currentBuildingName,
