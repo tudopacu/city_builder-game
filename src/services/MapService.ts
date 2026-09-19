@@ -14,7 +14,11 @@ export class MapService {
     }
 
     tileClicked(tile: Tile) {
-        if (tile.player_building_id !== null && tile.player_building_id !== undefined) {
+        if (
+            tile.player_building_id !== null &&
+            tile.player_building_id !== undefined &&
+            tile.player_building_id > 0
+        ) {
             this.scene.events.emit('buildingClicked', tile.player_building_id);
         }
     }
