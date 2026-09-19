@@ -1,5 +1,5 @@
 # Stage 1: Build the Phaser 3 game assets
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 WORKDIR /app
 
 ARG VITE_API_URL
@@ -9,7 +9,7 @@ ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_CDN_URL=$VITE_CDN_URL
 
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --prefer-offline --no-audit --no-fund || npm install
 COPY . .
 RUN npm run build
 
