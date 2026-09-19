@@ -77,7 +77,7 @@ export class PlayerBuildingsService {
         });
 
         this.scene.events.on('buildingClicked', (playerBuildingId: number) => {
-            if (this.buildingRemoveMode) {
+            if (this.buildingRemoveMode && Number.isInteger(playerBuildingId) && playerBuildingId > 0) {
                 void this.removeBuilding(playerBuildingId);
             }
         });
@@ -244,9 +244,9 @@ export class PlayerBuildingsService {
             const data = await response.json().catch(() => null) as {
                 player_building?: { id?: number };
             } | null;
-            const createdId = data?.player_building?.id;
+            const createdId = data?.player_building?.id ?? null;
 
-            if (Number.isInteger(createdId) && createdId > 0) {
+            if (typeof createdId === 'number' && Number.isInteger(createdId) && createdId > 0) {
                 return createdId;
             }
 

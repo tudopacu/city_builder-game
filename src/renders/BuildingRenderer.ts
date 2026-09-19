@@ -30,6 +30,10 @@ export class BuildingRenderer {
         const buildingImage = this.scene.add.image(isoX, isoY, 'building_' + playerBuilding.building.id);
         buildingImage.setOrigin(0.5, 1);
         buildingImage.setDepth(isoY);
+        buildingImage.setInteractive();
+        buildingImage.on('pointerdown', () => {
+            this.scene.events.emit('buildingClicked', playerBuilding.id);
+        });
 
         const text = this.scene.add.text(isoX, isoY - BUILDING_LABEL_OFFSET_Y, playerBuilding.building.name, {
             fontSize: '12px',
