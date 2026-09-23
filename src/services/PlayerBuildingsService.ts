@@ -254,7 +254,8 @@ export class PlayerBuildingsService {
             } catch {
                 return null;
             }
-            return typeof data?.player_building?.id === "number" ? data.player_building.id : null;
+            const createdId = data?.player_building?.id;
+            return Number.isInteger(createdId) && createdId > 0 ? createdId : null;
         } catch (error) {
             console.error('Error sending building to backend:', error);
             return null;
