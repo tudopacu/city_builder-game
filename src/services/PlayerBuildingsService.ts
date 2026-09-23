@@ -244,6 +244,10 @@ export class PlayerBuildingsService {
                 return null;
             }
 
+            if (response.status === 204) {
+                return null;
+            }
+
             const data = await response.json();
             return typeof data?.player_building?.id === "number" ? data.player_building.id : null;
         } catch (error) {
