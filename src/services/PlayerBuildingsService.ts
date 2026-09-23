@@ -244,9 +244,9 @@ export class PlayerBuildingsService {
             const data = await response.json().catch(() => null) as {
                 player_building?: { id?: number };
             } | null;
-            const createdId = data?.player_building?.id ?? null;
+            const createdId = data?.player_building?.id;
 
-            if (typeof createdId === 'number' && Number.isInteger(createdId) && createdId > 0) {
+            if (Number.isInteger(createdId) && createdId > 0) {
                 return createdId;
             }
 
