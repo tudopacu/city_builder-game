@@ -248,7 +248,12 @@ export class PlayerBuildingsService {
                 return null;
             }
 
-            const data = await response.json();
+            let data: { player_building?: { id?: number } };
+            try {
+                data = await response.json();
+            } catch {
+                return null;
+            }
             return typeof data?.player_building?.id === "number" ? data.player_building.id : null;
         } catch (error) {
             console.error('Error sending building to backend:', error);
