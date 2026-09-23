@@ -7,6 +7,7 @@ const CROP_X = 0;
 const CROP_Y = 0;
 const CROP_W = 64;
 const CROP_H = 64;
+const CLICK_DRAG_THRESHOLD_PX = 8;
 
 export class MapRenderer {
     constructor(
@@ -58,8 +59,12 @@ export class MapRenderer {
             label.setOrigin(0.5, 0.5);
 
             tileImg.setInteractive();
-            tileImg.on('pointerdown', () => {
-                this.scene.events.emit('tileClicked', tile);
+            tileImg.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+                const dragDistance = Phaser.Math.Distance.Between(pointer.downX, pointer.downY, pointer.upX, pointer.upY);
+
+                if (dragDistance <= CLICK_DRAG_THRESHOLD_PX) {
+                    this.scene.events.emit('tileClicked', tile);
+                }
             });
 
             this.layer.add([tileImg, label]);
