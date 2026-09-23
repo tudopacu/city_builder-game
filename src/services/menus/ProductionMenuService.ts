@@ -7,6 +7,8 @@ import { Player } from "../../models/Player";
 
 export class ProductionMenuService {
     private productionMenuPanel: Phaser.GameObjects.GameObject[] = [];
+    private productionRows: Phaser.GameObjects.Rectangle[] = [];
+    private isStartingProduction = false;
 
     constructor(
         private scene: Phaser.Scene,
@@ -20,6 +22,7 @@ export class ProductionMenuService {
 
     private showProductionMenu(playerBuilding: PlayerBuilding, productions: BuildingProduction[]): void {
         this.closeProductionMenu();
+        this.isStartingProduction = false;
 
         const panelX = 50;
         const panelY = 80;
@@ -74,9 +77,13 @@ export class ProductionMenuService {
                 .on('pointerover', () => rowBg.setFillStyle(0x3a6a3a))
                 .on('pointerout', () => rowBg.setFillStyle(0x2a4a2a))
                 .on('pointerdown', () => {
+                    if (this.isStartingProduction) {
+                        return;
+                    }
                     void this.startProduction(playerBuilding.id, production.id);
                 });
             this.productionMenuPanel.push(rowBg);
+            this.productionRows.push(rowBg);
 
             // Production item name
             const nameText = this.scene.add.text(panelX + padding * 2, rowY + 6, production.item_name, {
@@ -100,17 +107,33 @@ export class ProductionMenuService {
     }
 
     private async startProduction(playerBuildingId: number, buildingProductionId: number): Promise<void> {
+        this.isStartingProduction = true;
+        this.setProductionRowsEnabled(false);
+
         const success = await BuildingService.startProduction(this.player.id, playerBuildingId, buildingProductionId);
 
         if (success) {
             this.closeProductionMenu();
         } else {
             console.error(`Failed to start production ${buildingProductionId} for building ${playerBuildingId}.`);
+            this.isStartingProduction = false;
+            this.setProductionRowsEnabled(true);
         }
+    }
+
+    private setProductionRowsEnabled(enabled: boolean): void {
+        this.productionRows.forEach(row => {
+            if (enabled) {
+                row.setInteractive({ useHandCursor: true });
+            } else {
+                row.disableInteractive();
+            }
+        });
     }
 
     private closeProductionMenu(): void {
         this.productionMenuPanel.forEach(obj => obj.destroy());
         this.productionMenuPanel = [];
+        this.productionRows = [];
     }
 }
