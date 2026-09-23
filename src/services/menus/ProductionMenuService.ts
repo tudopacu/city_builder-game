@@ -9,6 +9,7 @@ export class ProductionMenuService {
     private productionMenuPanel: Phaser.GameObjects.GameObject[] = [];
     private productionRows: Phaser.GameObjects.Rectangle[] = [];
     private isStartingProduction = false;
+    private menuGeneration = 0;
 
     constructor(
         private scene: Phaser.Scene,
@@ -23,6 +24,7 @@ export class ProductionMenuService {
     private showProductionMenu(playerBuilding: PlayerBuilding, productions: BuildingProduction[]): void {
         this.closeProductionMenu();
         this.isStartingProduction = false;
+        const currentGeneration = ++this.menuGeneration;
 
         const panelX = 50;
         const panelY = 80;
@@ -80,7 +82,7 @@ export class ProductionMenuService {
                     if (this.isStartingProduction) {
                         return;
                     }
-                    void this.startProduction(playerBuilding.id, production.id);
+                    void this.startProduction(playerBuilding.id, production.id, currentGeneration);
                 });
             this.productionMenuPanel.push(rowBg);
             this.productionRows.push(rowBg);
@@ -106,14 +108,16 @@ export class ProductionMenuService {
         this.hudLayer.getLayer().add(this.productionMenuPanel);
     }
 
-    private async startProduction(playerBuildingId: number, buildingProductionId: number): Promise<void> {
+    private async startProduction(playerBuildingId: number, buildingProductionId: number, menuGeneration: number): Promise<void> {
         this.isStartingProduction = true;
         this.setProductionRowsEnabled(false);
 
         const success = await BuildingService.startProduction(this.player.id, playerBuildingId, buildingProductionId);
 
         if (success) {
-            this.closeProductionMenu();
+            if (menuGeneration === this.menuGeneration) {
+                this.closeProductionMenu();
+            }
         } else {
             console.error(`Failed to start production ${buildingProductionId} for building ${playerBuildingId}.`);
             this.isStartingProduction = false;
