@@ -30,10 +30,6 @@ export class PlayerBuildingsService {
     public buildingPlacementMode = false;
     public buildingRemoveMode = false;
 
-    // Counter for assigning unique temporary IDs to locally-placed buildings.
-    // These IDs are replaced by real backend IDs after a page reload.
-    private static nextTempId = -1;
-
     // Building overlay constants
     private OVERLAY_OFFSET_Y = 16;
     private OVERLAY_WIDTH = 48;
@@ -221,12 +217,12 @@ export class PlayerBuildingsService {
         }
     }
 
-    private async sendBuildingToBackend(x: number, y: number): Promise<boolean> {
+    private async sendBuildingToBackend(x: number, y: number): Promise<number | null> {
         try {
             const mapId = this.map?.id;
             if (!mapId) {
                 console.error('Map ID is null or undefined.');
-                return false;
+                return null;
             }
 
             const response = await fetch(`${CONFIG.backendUrl}/game/add_building`, {
@@ -244,10 +240,15 @@ export class PlayerBuildingsService {
                 }),
             });
 
-            return response.ok;
+            if (!response.ok) {
+                return null;
+            }
+
+            const data = await response.json();
+            return typeof data?.player_building?.id === "number" ? data.player_building.id : null;
         } catch (error) {
             console.error('Error sending building to backend:', error);
-            return false;
+            return null;
         }
     }
 
@@ -330,12 +331,12 @@ export class PlayerBuildingsService {
         const tilePos = this.worldToTile(worldPoint.x, worldPoint.y);
 
         // Send POST request to backend
-        const success = await this.sendBuildingToBackend(tilePos.x, tilePos.y);
+        const playerBuildingId = await this.sendBuildingToBackend(tilePos.x, tilePos.y);
 
-        if (success) {
+        if (playerBuildingId !== null) {
             // Build the new player building record
             const newPlayerBuilding: PlayerBuilding = {
-                id: PlayerBuildingsService.nextTempId--, // Negative temp ID; real ID assigned after reload
+                id: playerBuildingId,
                 building: {
                     id: this.currentBuildingId,
                     name: this.currentBuildingName,
@@ -351,7 +352,24 @@ export class PlayerBuildingsService {
             };
 
             // Register in registry so overlap checking is aware of the new building
-            this.scene.registry.get("playerBuildings")?.push(newPlayerBuilding);
+            const playerBuildings: PlayerBuilding[] = this.scene.registry.get("playerBuildings") || [];
+            playerBuildings.push(newPlayerBuilding);
+            this.scene.registry.set("playerBuildings", playerBuildings);
+
+            // Mark occupied map tiles so tile clicks can resolve the just-placed building immediately
+            const gameMap = this.map;
+            if (gameMap?.terrains) {
+                for (let dx = 0; dx < this.currentBuildingWidth; dx++) {
+                    for (let dy = 0; dy < this.currentBuildingHeight; dy++) {
+                        const occupiedTile = gameMap.terrains.find(
+                            (tile) => tile.x === tilePos.x + dx && tile.y === tilePos.y + dy,
+                        );
+                        if (occupiedTile) {
+                            occupiedTile.player_building_id = playerBuildingId;
+                        }
+                    }
+                }
+            }
 
             // Render via RenderService so the building is tracked and interactive
             this.worldLayer.buildingRenderer?.renderBuilding(newPlayerBuilding);
