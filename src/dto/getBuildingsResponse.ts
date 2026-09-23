@@ -5,6 +5,7 @@ export interface BuildingCost {
 }
 
 export interface BuildingProduction {
+    id: number;
     item_id: number;
     item_name: string;
     quantity: number;

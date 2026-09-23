@@ -9,6 +9,7 @@ import Camera = Phaser.Cameras.Scene2D.Camera;
 import {BuildingData} from "../dto/getBuildingsResponse";
 import {PlayerBuilding} from "../models/PlayerBuilding";
 import {BuildingService} from "./BuildingService";
+import {Tile} from "../models/Tile";
 
 // SVG data URL for a red X cursor (32x32, hotspot at center 16,16)
 const REMOVE_CURSOR =
@@ -80,6 +81,32 @@ export class PlayerBuildingsService {
             if (this.buildingRemoveMode && Number.isInteger(playerBuildingId) && playerBuildingId > 0) {
                 void this.removeBuilding(playerBuildingId);
             }
+        });
+
+        this.scene.events.on('tileClicked', (tile: Tile) => {
+            if (this.buildingPlacementMode || this.buildingRemoveMode) {
+                return;
+            }
+
+            if (!tile.player_building_id) {
+                return;
+            }
+
+            const playerBuildings: PlayerBuilding[] = this.scene.registry.get("playerBuildings") || [];
+            const playerBuilding = playerBuildings.find(b => b.id === tile.player_building_id);
+
+            if (!playerBuilding) {
+                return;
+            }
+
+            const buildings: BuildingData[] = this.scene.registry.get("buildings") || [];
+            const buildingData = buildings.find(b => b.id === playerBuilding.building.id);
+
+            if (!buildingData || !buildingData.productions || buildingData.productions.length === 0) {
+                return;
+            }
+
+            this.scene.events.emit('showProductionMenu', playerBuilding, buildingData.productions);
         });
     }
 
