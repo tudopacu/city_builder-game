@@ -5,6 +5,12 @@ export interface BuildingCost {
 }
 
 export interface BuildingProduction {
+    building_production_id: number;
+    id?: number;
+    production_id?: number;
+    buildingProductionId?: number;
+    building_production?: { id?: number };
+    production?: { id?: number };
     item_id: number;
     item_name: string;
     quantity: number;

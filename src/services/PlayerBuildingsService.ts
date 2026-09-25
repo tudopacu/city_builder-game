@@ -79,6 +79,8 @@ export class PlayerBuildingsService {
         this.scene.events.on('buildingClicked', (playerBuildingId: number) => {
             if (this.buildingRemoveMode && Number.isInteger(playerBuildingId) && playerBuildingId > 0) {
                 void this.removeBuilding(playerBuildingId);
+            } else if (!this.buildingRemoveMode && Number.isInteger(playerBuildingId) && playerBuildingId > 0) {
+                this.scene.events.emit('buildingProductionClicked', playerBuildingId);
             }
         });
     }

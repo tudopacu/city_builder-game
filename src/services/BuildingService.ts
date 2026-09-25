@@ -1,7 +1,7 @@
 import { CONFIG } from '../configuration';
 import { GetPlayerBuildingsResponse } from '../dto/getPlayerBuildingsResponse';
 import { GetBuildingsResponse, BuildingData } from '../dto/getBuildingsResponse';
-import {PlayerBuilding} from "../models/PlayerBuilding";
+import {BuildingCurrentProduction, PlayerBuilding} from "../models/PlayerBuilding";
 
 export class BuildingService {
     static async getBuildings(): Promise<BuildingData[]> {
@@ -55,6 +55,55 @@ export class BuildingService {
             return response.ok;
         } catch (error) {
             console.error('Error removing player building:', error);
+            return false;
+        }
+    }
+
+    static async startProduction(
+        playerId: number,
+        playerBuildingId: number,
+        buildingProductionId: number,
+    ): Promise<BuildingCurrentProduction | null> {
+        try {
+            const response = await fetch(
+                `${CONFIG.backendUrl}/game/start_production/${playerId}/${playerBuildingId}/${buildingProductionId}`,
+                {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                },
+            );
+
+            if (!response.ok) {
+                return null;
+            }
+
+            const data = await response.json() as { building_current_production?: BuildingCurrentProduction };
+            return data.building_current_production || null;
+        } catch (error) {
+            console.error('Error starting production:', error);
+            return null;
+        }
+    }
+
+    static async collectProduction(
+        playerId: number,
+        playerBuildingId: number,
+        buildingProductionId: number,
+    ): Promise<boolean> {
+        try {
+            const response = await fetch(
+                `${CONFIG.backendUrl}/game/collect_production/${playerId}/${playerBuildingId}/${buildingProductionId}`,
+                {
+                    method: 'PUT',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                },
+            );
+
+            return response.ok;
+        } catch (error) {
+            console.error('Error collecting production:', error);
             return false;
         }
     }
