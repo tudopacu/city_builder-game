@@ -1,6 +1,8 @@
 import Phaser from "phaser";
 import {BuildingData} from "../../dto/getBuildingsResponse";
 import {HUDLayer} from "../../layers/HUDLayer";
+import {PlayerInventory} from "../../models/PlayerInventory";
+import {ItemService} from "../ItemService";
 
 export class BuildingsMenuService {
     private buildingListPanel: Phaser.GameObjects.GameObject[] = [];
@@ -17,12 +19,13 @@ export class BuildingsMenuService {
         this.closeBuildingList();
 
         const buildings: BuildingData[] = this.scene.registry.get("buildings") || [];
+        const inventories: PlayerInventory[] = this.scene.registry.get("playerInventories") || [];
 
         const panelX = 50;
         const panelY = 80;
         const panelWidth = 500;
         const headerHeight = 44;
-        const rowHeight = 70;
+        const rowHeight = 82;
         const rowSpacing = 8;
         const padding = 12;
         const emptyRowHeight = 36;
@@ -69,6 +72,7 @@ export class BuildingsMenuService {
 
         buildings.forEach((building, index) => {
             const rowY = rowsStartY + index * (rowHeight + rowSpacing) + rowSpacing;
+            const affordable = this.canAfford(building, inventories);
 
             // Row background (interactive)
             const rowBg = this.scene.add.rectangle(
@@ -77,14 +81,18 @@ export class BuildingsMenuService {
                 panelWidth - padding * 2,
                 rowHeight,
                 0x2a2a4a,
-            ).setOrigin(0, 0)
-                .setInteractive({ useHandCursor: true })
-                .on('pointerover', () => rowBg.setFillStyle(0x3a3a6a))
-                .on('pointerout', () => rowBg.setFillStyle(0x2a2a4a))
-                .on('pointerdown', () => {
-                    this.closeBuildingList();
-                    this.scene.events.emit('startBuildingPlacementEvent', building);
-                });
+            ).setOrigin(0, 0);
+            if (affordable) {
+                rowBg.setInteractive({ useHandCursor: true })
+                    .on('pointerover', () => rowBg.setFillStyle(0x3a3a6a))
+                    .on('pointerout', () => rowBg.setFillStyle(0x2a2a4a))
+                    .on('pointerdown', () => {
+                        this.closeBuildingList();
+                        this.scene.events.emit('startBuildingPlacementEvent', building);
+                    });
+            } else {
+                rowBg.setFillStyle(0x321f2a);
+            }
             this.buildingListPanel.push(rowBg);
 
             // Building name
@@ -104,11 +112,23 @@ export class BuildingsMenuService {
                 this.buildingListPanel.push(costsHeader);
 
                 building.costs.forEach((cost, costIndex) => {
+                    const available = ItemService.getAvailableQuantity(cost.item_id, inventories);
+                    const missing = Math.max(0, cost.quantity - available);
+                    const costX = panelX + padding * 2 + 50 + costIndex * 140;
+                    const costSection = this.scene.add.rectangle(
+                        costX - 4,
+                        rowY + 25,
+                        132,
+                        48,
+                        missing > 0 ? 0x7a2630 : 0x39405c,
+                        0.75,
+                    ).setOrigin(0, 0);
+                    this.buildingListPanel.push(costSection);
                     const costText = this.scene.add.text(
-                        panelX + padding * 2 + 50 + costIndex * 140,
+                        costX,
                         rowY + 28,
-                        `${cost.item_name}: ${cost.quantity}`,
-                        { fontSize: '11px', color: '#cccccc' },
+                        `${cost.item_name}: ${cost.quantity}\nAvailable: ${available}${missing > 0 ? ` (Missing: ${missing})` : ''}`,
+                        { fontSize: '10px', color: missing > 0 ? '#ff8b8b' : '#cccccc' },
                     );
                     this.buildingListPanel.push(costText);
                 });
@@ -122,6 +142,12 @@ export class BuildingsMenuService {
         });
 
         this.hudLayer.getLayer().add(this.buildingListPanel);
+    }
+
+    private canAfford(building: BuildingData, inventories: PlayerInventory[]): boolean {
+        return (building.costs || []).every(cost =>
+            ItemService.getAvailableQuantity(cost.item_id, inventories) >= cost.quantity,
+        );
     }
 
     private closeBuildingList(): void {

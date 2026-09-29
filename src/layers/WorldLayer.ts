@@ -49,6 +49,8 @@ export class WorldLayer {
     await this.loadPlayerBuildings(this.player.id, 1);
 
     await this.loadMap();
+    const map: GameMap = this.scene.registry.get("map");
+    await this.loadPlayerInventories(this.player.id, map.id);
 
     //loading assets
     this.imagePreloadingService?.loadMap();
@@ -62,7 +64,7 @@ export class WorldLayer {
   }
 
   private async loadMap(): Promise<void> {
-    let map: GameMap | undefined = await MapService.getMap();
+    const map: GameMap | undefined = await MapService.getMap();
 
     if (!map) {
       throw new Error("Map data is undefined");
@@ -77,6 +79,10 @@ export class WorldLayer {
 
   private async loadItems(): Promise<void> {
     this.scene.registry.set("items",  await ItemService.getItems());
+  }
+
+  private async loadPlayerInventories(playerId: number, mapId: number): Promise<void> {
+    this.scene.registry.set("playerInventories", await ItemService.getPlayerInventories(playerId, mapId));
   }
 
   private async loadPlayerBuildings(playerId: number, mapId: number): Promise<void> {

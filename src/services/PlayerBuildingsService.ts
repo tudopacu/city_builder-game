@@ -6,9 +6,11 @@ import {HALF_H, HALF_W} from "../constants/constants";
 import {GameMap} from "../models/GameMap";
 import {WorldLayer} from "../layers/WorldLayer";
 import Camera = Phaser.Cameras.Scene2D.Camera;
-import {BuildingData} from "../dto/getBuildingsResponse";
+import {BuildingCost, BuildingData} from "../dto/getBuildingsResponse";
 import {PlayerBuilding} from "../models/PlayerBuilding";
 import {BuildingService} from "./BuildingService";
+import {ItemService} from "./ItemService";
+import {PlayerInventory} from "../models/PlayerInventory";
 
 // SVG data URL for a red X cursor (32x32, hotspot at center 16,16)
 const REMOVE_CURSOR =
@@ -26,6 +28,7 @@ export class PlayerBuildingsService {
     private currentBuildingName = '';
     private currentBuildingWidth = 1;
     private currentBuildingHeight = 1;
+    private currentBuildingCosts: BuildingCost[] = [];
     public buildingPlacementMode = false;
     public buildingRemoveMode = false;
 
@@ -327,7 +330,14 @@ export class PlayerBuildingsService {
         // Update the preview one more time to ensure we have the latest state
         this.updateBuildingPreview(input.activePointer);
 
-        if (!this.isValidPlacement || !this.buildingPreview) {
+        const mapId = this.map?.id;
+        if (!this.isValidPlacement || !this.buildingPreview || !mapId) {
+            return;
+        }
+
+        // Re-check here as well as in the menu, since inventory may have changed
+        // while the placement preview was open.
+        if (!this.canAffordCurrentBuilding()) {
             return;
         }
 
@@ -342,6 +352,8 @@ export class PlayerBuildingsService {
         const createdPlayerBuildingId = await this.sendBuildingToBackend(tilePos.x, tilePos.y);
 
         if (createdPlayerBuildingId !== null) {
+            this.scene.registry.set('playerInventories',
+                await ItemService.getPlayerInventories(this.player.id, mapId));
             // Build the new player building record
             const newPlayerBuilding: PlayerBuilding = {
                 id: createdPlayerBuildingId,
@@ -395,5 +407,14 @@ export class PlayerBuildingsService {
         this.currentBuildingName = building.name;
         this.currentBuildingWidth = building.width;
         this.currentBuildingHeight = building.length;
+        this.currentBuildingCosts = building.costs || [];
+    }
+
+    private canAffordCurrentBuilding(): boolean {
+        const inventories: PlayerInventory[] = this.scene.registry.get('playerInventories') || [];
+        return this.currentBuildingCosts.every(cost => {
+            const available = ItemService.getAvailableQuantity(cost.item_id, inventories);
+            return available >= cost.quantity;
+        });
     }
 }

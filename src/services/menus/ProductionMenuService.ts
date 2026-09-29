@@ -1,13 +1,17 @@
 import Phaser from 'phaser';
 import { Player } from '../../models/Player';
+import { GameMap } from '../../models/GameMap';
+import { PlayerInventory } from '../../models/PlayerInventory';
 import { BuildingCurrentProduction, PlayerBuilding } from '../../models/PlayerBuilding';
 import { BuildingData, BuildingProduction } from '../../dto/getBuildingsResponse';
 import { HUDLayer } from '../../layers/HUDLayer';
 import { BuildingService } from '../BuildingService';
+import { ItemService } from '../ItemService';
 
 export class ProductionMenuService {
     private productionMenu: Phaser.GameObjects.GameObject[] = [];
     private productionTimer: Phaser.Time.TimerEvent | null = null;
+    private collectingProduction = false;
 
     constructor(
         private scene: Phaser.Scene,
@@ -91,13 +95,16 @@ export class ProductionMenuService {
         const panelHeight = 190;
         const padding = 12;
         const done = production.status.toLowerCase() === 'done';
+        const missingSpace = done ? this.getMissingStorageSpace(production) : 0;
+        const insufficientSpace = missingSpace > 0;
 
-        const panelBg = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x1a1a2e, 0.97)
+        const panelBg = this.scene.add.rectangle(panelX, panelY, panelWidth, panelHeight,
+            insufficientSpace ? 0x321f2a : 0x1a1a2e, 0.97)
             .setOrigin(0, 0);
         this.productionMenu.push(panelBg);
 
         const title = this.scene.add.text(panelX + padding, panelY + padding, 'Current Production', {
-            fontSize: '18px', color: '#ffffff', fontStyle: 'bold',
+            fontSize: '18px', color: insufficientSpace ? '#ff8b8b' : '#ffffff', fontStyle: 'bold',
         });
         this.productionMenu.push(title);
 
@@ -109,9 +116,10 @@ export class ProductionMenuService {
         const divider = this.scene.add.rectangle(panelX, panelY + 44, panelWidth, 2, 0x444466).setOrigin(0, 0);
         this.productionMenu.push(divider);
 
-        const infoBg = this.scene.add.rectangle(panelX + padding, panelY + 56, panelWidth - padding * 2, 88, 0x2a2a4a)
+        const infoBg = this.scene.add.rectangle(panelX + padding, panelY + 56, panelWidth - padding * 2, 76,
+            insufficientSpace ? 0x7a2630 : 0x2a2a4a)
             .setOrigin(0, 0);
-        if (done) {
+        if (done && !insufficientSpace) {
             infoBg.setInteractive({ useHandCursor: true })
                 .on('pointerover', () => infoBg.setFillStyle(0x3a3a6a))
                 .on('pointerout', () => infoBg.setFillStyle(0x2a2a4a))
@@ -123,15 +131,22 @@ export class ProductionMenuService {
             panelX + padding,
             panelY + 62,
             `${this.getItemName(production)} × ${this.getQuantity(production)}\nStatus: ${production.status}`,
-            { fontSize: '15px', color: '#ffffff', lineSpacing: 8 },
+            { fontSize: '15px', color: insufficientSpace ? '#ffb3b3' : '#ffffff', lineSpacing: 8 },
         );
         this.productionMenu.push(info);
 
         if (done) {
-            const collect = this.scene.add.text(panelX + padding, panelY + 138, 'Click to collect', {
-                fontSize: '14px', color: '#66dd88', fontStyle: 'bold',
-            }).setInteractive({ useHandCursor: true });
-            collect.on('pointerdown', () => void this.collectProduction(production, playerBuildingId));
+            const message = insufficientSpace
+                ? `Not enough space in the storage.\nMissing ${missingSpace} ${missingSpace === 1 ? 'unit' : 'units'} of space.`
+                : 'Click to collect';
+            const collect = this.scene.add.text(panelX + padding, panelY + 138, message, {
+                fontSize: '14px', color: insufficientSpace ? '#ff8b8b' : '#66dd88', fontStyle: 'bold',
+                lineSpacing: 4,
+            });
+            if (!insufficientSpace) {
+                collect.setInteractive({ useHandCursor: true });
+                collect.on('pointerdown', () => void this.collectProduction(production, playerBuildingId));
+            }
             this.productionMenu.push(collect);
             return;
         }
@@ -232,21 +247,46 @@ export class ProductionMenuService {
     }
 
     private async collectProduction(production: BuildingCurrentProduction, playerBuildingId: number): Promise<void> {
-        const success = await BuildingService.collectProduction(
-            this.player.id,
-            playerBuildingId,
-            production.building_production_id,
-        );
-        if (success) {
-            const playerBuildings: PlayerBuilding[] = this.scene.registry.get('playerBuildings') || [];
-            this.scene.registry.set('playerBuildings', playerBuildings.map(playerBuilding =>
-                playerBuilding.id === playerBuildingId
-                    ? { ...playerBuilding, building_current_production: null }
-                    : playerBuilding,
-            ));
-            this.scene.events.emit('productionCollected', playerBuildingId);
-            this.closeProductionMenu();
+        if (this.collectingProduction || production.status.toLowerCase() !== 'done') {
+            return;
         }
+        if (this.getMissingStorageSpace(production) > 0) {
+            this.closeProductionMenu();
+            this.showCurrentProduction(production, playerBuildingId);
+            return;
+        }
+
+        this.collectingProduction = true;
+        try {
+            const success = await BuildingService.collectProduction(
+                this.player.id,
+                playerBuildingId,
+                production.building_production_id,
+            );
+            if (success) {
+                const map: GameMap | undefined = this.scene.registry.get('map');
+                if (map) {
+                    this.scene.registry.set('playerInventories',
+                        await ItemService.getPlayerInventories(this.player.id, map.id));
+                }
+                const playerBuildings: PlayerBuilding[] = this.scene.registry.get('playerBuildings') || [];
+                this.scene.registry.set('playerBuildings', playerBuildings.map(playerBuilding =>
+                    playerBuilding.id === playerBuildingId
+                        ? { ...playerBuilding, building_current_production: null }
+                        : playerBuilding,
+                ));
+                this.scene.events.emit('productionCollected', playerBuildingId);
+                this.closeProductionMenu();
+            }
+        } finally {
+            this.collectingProduction = false;
+        }
+    }
+
+    private getMissingStorageSpace(production: BuildingCurrentProduction): number {
+        const inventories: PlayerInventory[] = this.scene.registry.get('playerInventories') || [];
+        const quantity = production.quantity ?? production.item?.quantity ?? 0;
+        return Math.max(0, quantity - ItemService.getAvailableCapacity(inventories));
     }
 
     private getProductionId(production: BuildingProduction): number | undefined {
