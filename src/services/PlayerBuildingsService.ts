@@ -83,7 +83,13 @@ export class PlayerBuildingsService {
             if (this.buildingRemoveMode && Number.isInteger(playerBuildingId) && playerBuildingId > 0) {
                 void this.removeBuilding(playerBuildingId);
             } else if (!this.buildingRemoveMode && Number.isInteger(playerBuildingId) && playerBuildingId > 0) {
-                this.scene.events.emit('buildingProductionClicked', playerBuildingId);
+                const playerBuildings: PlayerBuilding[] = this.scene.registry.get('playerBuildings') || [];
+                const clickedBuilding = playerBuildings.find(building => building.id === playerBuildingId);
+                if (clickedBuilding?.building.building_category.toLowerCase().includes('storage')) {
+                    this.scene.events.emit('buildingStorageClicked', playerBuildingId);
+                } else {
+                    this.scene.events.emit('buildingProductionClicked', playerBuildingId);
+                }
             }
         });
     }

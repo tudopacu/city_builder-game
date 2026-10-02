@@ -44,7 +44,15 @@ export class BuildingRenderer {
         buildingImage.setOrigin(0.5, 1);
         buildingImage.setDepth(isoY);
         buildingImage.setInteractive();
-        buildingImage.on('pointerdown', () => {
+        buildingImage.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+            const pointerMovement = Phaser.Math.Distance.Between(
+                pointer.downX,
+                pointer.downY,
+                pointer.x,
+                pointer.y,
+            );
+            if (pointerMovement > 6) return;
+
             this.scene.events.emit('buildingClicked', playerBuilding.id);
         });
 

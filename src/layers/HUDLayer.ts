@@ -4,12 +4,14 @@ import {MainMenuService} from "../services/menus/MainMenuService";
 import Layer = Phaser.GameObjects.Layer;
 import {BuildingsMenuService} from "../services/menus/BuildingsMenuService";
 import {ProductionMenuService} from "../services/menus/ProductionMenuService";
+import {StorageMenuService} from "../services/menus/StorageMenuService";
 
 export class HUDLayer {
   private layer!: Layer;
   public mainMenuService: MainMenuService | null = null;
   public buildingsMenuService: BuildingsMenuService | null = null;
   public productionMenuService: ProductionMenuService | null = null;
+  public storageMenuService: StorageMenuService | null = null;
 
   constructor(
       private scene: Phaser.Scene,
@@ -25,6 +27,7 @@ export class HUDLayer {
     this.mainMenuService = new MainMenuService(this.scene, this);
     this.buildingsMenuService = new BuildingsMenuService(this.scene, this);
     this.productionMenuService = new ProductionMenuService(this.scene, this, this.player);
+    this.storageMenuService = new StorageMenuService(this.scene, this);
     this.mainMenuService.createMenu();
     this.createPlayerInfo();
   }
