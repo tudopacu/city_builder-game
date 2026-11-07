@@ -11,6 +11,7 @@ import {PlayerBuilding} from "../models/PlayerBuilding";
 import {BuildingService} from "./BuildingService";
 import {ItemService} from "./ItemService";
 import {PlayerInventory} from "../models/PlayerInventory";
+import {PopulationService, SHOW_MESSAGE_EVENT} from "./PopulationService";
 
 // SVG data URL for a red X cursor (32x32, hotspot at center 16,16)
 const REMOVE_CURSOR =
@@ -29,6 +30,7 @@ export class PlayerBuildingsService {
     private currentBuildingWidth = 1;
     private currentBuildingHeight = 1;
     private currentBuildingCosts: BuildingCost[] = [];
+    private currentBuildingPopulationCost = 0;
     public buildingPlacementMode = false;
     public buildingRemoveMode = false;
 
@@ -134,7 +136,7 @@ export class PlayerBuildingsService {
 
     private async removeBuilding(playerBuildingId: number): Promise<void> {
         // Transactional: call backend first; only update local state on success
-        const success = await BuildingService.removePlayerBuilding(playerBuildingId);
+        const { success, error } = await BuildingService.removePlayerBuilding(playerBuildingId);
 
         if (success) {
             // Remove from the layer
@@ -163,8 +165,17 @@ export class PlayerBuildingsService {
                     }
                 }
             }
+
+            // Removing a building releases its population, or removes the population
+            // a housing building provided.
+            const mapId = this.map?.id;
+            if (mapId) {
+                await PopulationService.refresh(this.scene, this.player.id, mapId);
+            }
         } else {
             console.error(`Failed to remove building ${playerBuildingId} from backend.`);
+            // For example: housing cannot be removed while its population is in use.
+            this.scene.events.emit(SHOW_MESSAGE_EVENT, error || 'Could not remove the building.');
         }
 
         this.exitBuildingRemoveMode();
@@ -244,6 +255,11 @@ export class PlayerBuildingsService {
             });
 
             if (!response.ok) {
+                // Tell the player why the backend refused, for example not enough population.
+                const failure = await response.json().catch(() => null) as { error?: string } | null;
+                if (failure?.error) {
+                    this.scene.events.emit(SHOW_MESSAGE_EVENT, failure.error);
+                }
                 return null;
             }
 
@@ -347,6 +363,13 @@ export class PlayerBuildingsService {
             return;
         }
 
+        // Same for population: it changes when other buildings are built or removed.
+        // The backend checks this too, this just avoids a pointless request.
+        if (!this.hasPopulationForCurrentBuilding()) {
+            this.scene.events.emit(SHOW_MESSAGE_EVENT, 'Not enough population. Build housing first.');
+            return;
+        }
+
         // Get the current tile position
         const worldPoint = this.worldCamera.getWorldPoint(
             input.activePointer.x,
@@ -360,6 +383,8 @@ export class PlayerBuildingsService {
         if (createdPlayerBuildingId !== null) {
             this.scene.registry.set('playerInventories',
                 await ItemService.getPlayerInventories(this.player.id, mapId));
+            // A new building uses population, or adds it when it is housing.
+            await PopulationService.refresh(this.scene, this.player.id, mapId);
             // Build the new player building record
             const newPlayerBuilding: PlayerBuilding = {
                 id: createdPlayerBuildingId,
@@ -414,6 +439,12 @@ export class PlayerBuildingsService {
         this.currentBuildingWidth = building.width;
         this.currentBuildingHeight = building.length;
         this.currentBuildingCosts = building.costs || [];
+        this.currentBuildingPopulationCost = PopulationService.getCost(building);
+    }
+
+    private hasPopulationForCurrentBuilding(): boolean {
+        return this.currentBuildingPopulationCost <= 0 ||
+            PopulationService.getCurrent(this.scene).available >= this.currentBuildingPopulationCost;
     }
 
     private canAffordCurrentBuilding(): boolean {

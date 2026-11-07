@@ -25,6 +25,10 @@ export interface BuildingData {
     width: number;
     length: number;
     building_category: string;
+    // Population a housing building adds while it exists
+    population_capacity?: number;
+    // Population a building uses while it exists
+    population_cost?: number;
     costs: BuildingCost[];
     productions: BuildingProduction[];
 }

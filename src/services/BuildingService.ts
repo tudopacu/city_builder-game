@@ -44,7 +44,9 @@ export class BuildingService {
         }
     }
 
-    static async removePlayerBuilding(playerBuildingId: number): Promise<boolean> {
+    // Returns the backend's reason when removal is refused, for example when
+    // removing housing would leave more population in use than housing provides.
+    static async removePlayerBuilding(playerBuildingId: number): Promise<{ success: boolean; error?: string }> {
         try {
             const response = await fetch(`${CONFIG.backendUrl}/game/remove_player_building/${playerBuildingId}`, {
                 method: 'DELETE',
@@ -52,10 +54,15 @@ export class BuildingService {
                 headers: { 'Content-Type': 'application/json' },
             });
 
-            return response.ok;
+            if (response.ok) {
+                return { success: true };
+            }
+
+            const data = await response.json().catch(() => null) as { error?: string } | null;
+            return { success: false, error: data?.error };
         } catch (error) {
             console.error('Error removing player building:', error);
-            return false;
+            return { success: false };
         }
     }
 

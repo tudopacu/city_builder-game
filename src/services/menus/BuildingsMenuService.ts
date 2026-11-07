@@ -3,6 +3,7 @@ import {BuildingData} from "../../dto/getBuildingsResponse";
 import {HUDLayer} from "../../layers/HUDLayer";
 import {PlayerInventory} from "../../models/PlayerInventory";
 import {ItemService} from "../ItemService";
+import {PopulationService} from "../PopulationService";
 
 export class BuildingsMenuService {
     private buildingListPanel: Phaser.GameObjects.GameObject[] = [];
@@ -20,6 +21,7 @@ export class BuildingsMenuService {
 
         const buildings: BuildingData[] = this.scene.registry.get("buildings") || [];
         const inventories: PlayerInventory[] = this.scene.registry.get("playerInventories") || [];
+        const population = PopulationService.getCurrent(this.scene);
 
         const panelX = 50;
         const panelY = 80;
@@ -72,7 +74,9 @@ export class BuildingsMenuService {
 
         buildings.forEach((building, index) => {
             const rowY = rowsStartY + index * (rowHeight + rowSpacing) + rowSpacing;
-            const affordable = this.canAfford(building, inventories);
+            const hasPopulation = PopulationService.hasEnoughFor(building, population);
+            // A building can only be placed when its items and its population are both covered.
+            const affordable = this.canAfford(building, inventories) && hasPopulation;
 
             // Row background (interactive)
             const rowBg = this.scene.add.rectangle(
@@ -102,6 +106,25 @@ export class BuildingsMenuService {
                 fontStyle: 'bold',
             });
             this.buildingListPanel.push(nameText);
+
+            // Population: housing adds it, other buildings use it while they exist
+            const populationCost = PopulationService.getCost(building);
+            const populationCapacity = PopulationService.getCapacity(building);
+            if (populationCost > 0 || populationCapacity > 0) {
+                const parts: string[] = [];
+                if (populationCapacity > 0) {
+                    parts.push(`Provides ${populationCapacity} population`);
+                }
+                if (populationCost > 0) {
+                    parts.push(`Uses ${populationCost} population` +
+                        `${hasPopulation ? '' : ` (Free: ${Math.max(0, population.available)})`}`);
+                }
+                const populationText = this.scene.add.text(panelX + padding * 2 + 200, rowY + 8, parts.join(' · '), {
+                    fontSize: '11px',
+                    color: hasPopulation ? '#aaccaa' : '#ff8b8b',
+                });
+                this.buildingListPanel.push(populationText);
+            }
 
             // Costs table header
             if (building.costs && building.costs.length > 0) {
