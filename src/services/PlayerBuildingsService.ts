@@ -383,8 +383,6 @@ export class PlayerBuildingsService {
         if (createdPlayerBuildingId !== null) {
             this.scene.registry.set('playerInventories',
                 await ItemService.getPlayerInventories(this.player.id, mapId));
-            // A new building uses population, or adds it when it is housing.
-            await PopulationService.refresh(this.scene, this.player.id, mapId);
             // Build the new player building record
             const newPlayerBuilding: PlayerBuilding = {
                 id: createdPlayerBuildingId,
@@ -426,6 +424,10 @@ export class PlayerBuildingsService {
 
             // Render via RenderService so the building is tracked and interactive
             this.worldLayer.buildingRenderer?.renderBuilding(newPlayerBuilding);
+
+            // A new building uses population, or adds it when it is housing. This comes
+            // after rendering so the building shows up without waiting for the request.
+            await PopulationService.refresh(this.scene, this.player.id, mapId);
         }
 
         // Exit placement mode
@@ -443,8 +445,10 @@ export class PlayerBuildingsService {
     }
 
     private hasPopulationForCurrentBuilding(): boolean {
-        return this.currentBuildingPopulationCost <= 0 ||
-            PopulationService.getCurrent(this.scene).available >= this.currentBuildingPopulationCost;
+        const population = PopulationService.getCurrent(this.scene);
+        // Unknown population (failed read) does not block: the backend decides.
+        return this.currentBuildingPopulationCost <= 0 || population === null ||
+            population.available >= this.currentBuildingPopulationCost;
     }
 
     private canAffordCurrentBuilding(): boolean {

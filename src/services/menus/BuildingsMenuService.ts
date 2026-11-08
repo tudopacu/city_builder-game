@@ -3,7 +3,7 @@ import {BuildingData} from "../../dto/getBuildingsResponse";
 import {HUDLayer} from "../../layers/HUDLayer";
 import {PlayerInventory} from "../../models/PlayerInventory";
 import {ItemService} from "../ItemService";
-import {PopulationService} from "../PopulationService";
+import {POPULATION_CHANGED_EVENT, PopulationService} from "../PopulationService";
 
 export class BuildingsMenuService {
     private buildingListPanel: Phaser.GameObjects.GameObject[] = [];
@@ -12,7 +12,17 @@ export class BuildingsMenuService {
         private hudLayer: HUDLayer
     ) {
         this.scene.events.on('buildButtonClicked', () => {
+            // If the population is unknown (failed read), try to load it again now.
+            PopulationService.ensureLoaded(this.scene);
             this.showBuildingList();
+        });
+
+        // Redraw an open menu when the population changes, so its rows and labels
+        // match the HUD instead of showing the balance from when it was opened.
+        this.scene.events.on(POPULATION_CHANGED_EVENT, () => {
+            if (this.buildingListPanel.length > 0) {
+                this.showBuildingList();
+            }
         });
     }
 
@@ -116,8 +126,11 @@ export class BuildingsMenuService {
                     parts.push(`Provides ${populationCapacity} population`);
                 }
                 if (populationCost > 0) {
-                    parts.push(`Uses ${populationCost} population` +
-                        `${hasPopulation ? '' : ` (Free: ${Math.max(0, population.available)})`}`);
+                    // Only show the free amount when it is known.
+                    const free = !hasPopulation && population !== null
+                        ? ` (Free: ${Math.max(0, population.available)})`
+                        : '';
+                    parts.push(`Uses ${populationCost} population${free}`);
                 }
                 const populationText = this.scene.add.text(panelX + padding * 2 + 200, rowY + 8, parts.join(' · '), {
                     fontSize: '11px',

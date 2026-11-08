@@ -55,7 +55,7 @@ export class HUDLayer {
     this.layer.add([this.populationText]);
     this.updatePopulationText(PopulationService.getCurrent(this.scene));
 
-    this.scene.events.on(POPULATION_CHANGED_EVENT, (population: Population) => {
+    this.scene.events.on(POPULATION_CHANGED_EVENT, (population: Population | null) => {
       this.updatePopulationText(population);
     });
     this.scene.events.on(SHOW_MESSAGE_EVENT, (message: string) => {
@@ -63,8 +63,15 @@ export class HUDLayer {
     });
   }
 
-  private updatePopulationText(population: Population): void {
+  private updatePopulationText(population: Population | null): void {
     if (!this.populationText) {
+      return;
+    }
+
+    // Unknown, for example while loading or after a failed read. Do not show a made-up zero.
+    if (population === null) {
+      this.populationText.setText('Population: unavailable');
+      this.populationText.setColor('#cccccc');
       return;
     }
 
