@@ -4,6 +4,7 @@ import { ImagePreloadingService } from '../services/ImagePreloadingService';
 import { BuildingService } from '../services/BuildingService';
 import { ItemService } from '../services/ItemService';
 import { RoadService } from '../services/RoadService';
+import { PopulationService } from '../services/PopulationService';
 import Layer = Phaser.GameObjects.Layer;
 import {Item} from "../models/Item";
 import {MapRenderer} from "../renders/MapRenderer";
@@ -51,6 +52,7 @@ export class WorldLayer {
     await this.loadMap();
     const map: GameMap = this.scene.registry.get("map");
     await this.loadPlayerInventories(this.player.id, map.id);
+    await PopulationService.refresh(this.scene, this.player.id, map.id);
 
     //loading assets
     this.imagePreloadingService?.loadMap();
