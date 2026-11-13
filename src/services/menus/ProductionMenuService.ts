@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { Player } from '../../models/Player';
 import { GameMap } from '../../models/GameMap';
 import { PlayerInventory } from '../../models/PlayerInventory';
 import { BuildingCurrentProduction, PlayerBuilding } from '../../models/PlayerBuilding';
@@ -16,7 +15,6 @@ export class ProductionMenuService {
     constructor(
         private scene: Phaser.Scene,
         private hudLayer: HUDLayer,
-        private player: Player,
     ) {
         this.scene.events.on('buildingProductionClicked', (playerBuildingId: number) => {
             void this.showProductionMenu(playerBuildingId);
@@ -218,7 +216,6 @@ export class ProductionMenuService {
             }
 
             const currentProduction = await BuildingService.startProduction(
-                this.player.id,
                 playerBuildingId,
                 productionId,
             );
@@ -259,7 +256,6 @@ export class ProductionMenuService {
         this.collectingProduction = true;
         try {
             const success = await BuildingService.collectProduction(
-                this.player.id,
                 playerBuildingId,
                 production.building_production_id,
             );
@@ -267,7 +263,7 @@ export class ProductionMenuService {
                 const map: GameMap | undefined = this.scene.registry.get('map');
                 if (map) {
                     this.scene.registry.set('playerInventories',
-                        await ItemService.getPlayerInventories(this.player.id, map.id));
+                        await ItemService.getPlayerInventories(map.id));
                 }
                 const playerBuildings: PlayerBuilding[] = this.scene.registry.get('playerBuildings') || [];
                 this.scene.registry.set('playerBuildings', playerBuildings.map(playerBuilding =>

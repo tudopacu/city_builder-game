@@ -3,9 +3,9 @@ import { Road } from '../models/Road';
 import { GetRoadsResponse } from '../dto/getRoadsResponse';
 
 export class RoadService {
-    static async getRoads(playerId: number, mapId: number): Promise<Road[]> {
+    static async getRoads(mapId: number): Promise<Road[]> {
         try {
-            const response = await fetch(`${CONFIG.backendUrl}/game/roads/${playerId}/${mapId}`, {
+            const response = await fetch(`${CONFIG.backendUrl}/game/roads/${mapId}`, {
                 method: 'GET',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },

@@ -11,7 +11,6 @@ import {MapRenderer} from "../renders/MapRenderer";
 import {BuildingRenderer} from "../renders/BuildingRenderer";
 import {PlayerBuilding} from "../models/PlayerBuilding";
 import {GameMap} from "../models/GameMap";
-import {Player} from "../models/Player";
 
 export class WorldLayer {
   private layer!: Layer;
@@ -23,7 +22,6 @@ export class WorldLayer {
 
   constructor(
       private scene: Phaser.Scene,
-      private player: Player,
   ) {}
 
   public getLayer(): Layer {
@@ -47,12 +45,12 @@ export class WorldLayer {
 
     //load player data
     await this.loadRoads();
-    await this.loadPlayerBuildings(this.player.id, 1);
+    await this.loadPlayerBuildings(1);
 
     await this.loadMap();
     const map: GameMap = this.scene.registry.get("map");
-    await this.loadPlayerInventories(this.player.id, map.id);
-    await PopulationService.refresh(this.scene, this.player.id, map.id);
+    await this.loadPlayerInventories(map.id);
+    await PopulationService.refresh(this.scene, map.id);
 
     //loading assets
     this.imagePreloadingService?.loadMap();
@@ -83,16 +81,16 @@ export class WorldLayer {
     this.scene.registry.set("items",  await ItemService.getItems());
   }
 
-  private async loadPlayerInventories(playerId: number, mapId: number): Promise<void> {
-    this.scene.registry.set("playerInventories", await ItemService.getPlayerInventories(playerId, mapId));
+  private async loadPlayerInventories(mapId: number): Promise<void> {
+    this.scene.registry.set("playerInventories", await ItemService.getPlayerInventories(mapId));
   }
 
-  private async loadPlayerBuildings(playerId: number, mapId: number): Promise<void> {
-    this.scene.registry.set("playerBuildings",  await BuildingService.getPlayerBuildings(playerId, mapId));
+  private async loadPlayerBuildings(mapId: number): Promise<void> {
+    this.scene.registry.set("playerBuildings",  await BuildingService.getPlayerBuildings(mapId));
   }
 
   private async loadRoads(): Promise<void> {
-    this.scene.registry.set("roads", await RoadService.getRoads(2, 1));
+    this.scene.registry.set("roads", await RoadService.getRoads(1));
   }
 
   private enrichMap(map: GameMap) {

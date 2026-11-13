@@ -23,7 +23,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   preload() {
-    this.worldLayer = new WorldLayer(this, this.player);
+    this.worldLayer = new WorldLayer(this);
     this.worldLayer.preload();
   }
 
@@ -39,7 +39,7 @@ export class GameScene extends Phaser.Scene {
 
     this.setupCameraControls();
 
-    this.playerBuildingsService = new PlayerBuildingsService(this, this.player, this.worldLayer, this.worldCamera);
+    this.playerBuildingsService = new PlayerBuildingsService(this, this.worldLayer, this.worldCamera);
   }
 
     private setupCameraControls(): void {
