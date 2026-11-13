@@ -12,7 +12,6 @@ const RETRY_DELAY_MS = 2000;
 const MAX_RETRIES = 5;
 
 interface RefreshState {
-    playerId: number;
     mapId: number;
     // Id of the newest refresh. A response for an older id is out of date and ignored.
     latestRequestId: number;
@@ -23,9 +22,9 @@ interface RefreshState {
 const refreshStates = new WeakMap<Phaser.Scene, RefreshState>();
 
 export class PopulationService {
-    static async getPopulation(playerId: number, mapId: number): Promise<Population | null> {
+    static async getPopulation(mapId: number): Promise<Population | null> {
         try {
-            const response = await fetch(`${CONFIG.backendUrl}/game/get_player_population/${playerId}/${mapId}`, {
+            const response = await fetch(`${CONFIG.backendUrl}/game/get_player_population/${mapId}`, {
                 method: 'GET',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
@@ -51,17 +50,16 @@ export class PopulationService {
     // - A failed read makes the population unknown (null) instead of leaving a zero or an
     //   old value behind, and retries a few times. While it is unknown the client does not
     //   block building, and the backend decides.
-    static async refresh(scene: Phaser.Scene, playerId: number, mapId: number): Promise<void> {
+    static async refresh(scene: Phaser.Scene, mapId: number): Promise<void> {
         const state = refreshStates.get(scene) ?? {
-            playerId, mapId, latestRequestId: 0, retries: 0, inFlight: false,
+            mapId, latestRequestId: 0, retries: 0, inFlight: false,
         };
-        state.playerId = playerId;
         state.mapId = mapId;
         const requestId = ++state.latestRequestId;
         state.inFlight = true;
         refreshStates.set(scene, state);
 
-        const population = await PopulationService.getPopulation(playerId, mapId);
+        const population = await PopulationService.getPopulation(mapId);
 
         if (requestId !== state.latestRequestId) {
             // A newer refresh started while this one was running. It decides the result.
@@ -88,7 +86,7 @@ export class PopulationService {
             return;
         }
         state.retries = 0;
-        void PopulationService.refresh(scene, state.playerId, state.mapId);
+        void PopulationService.refresh(scene, state.mapId);
     }
 
     // Null means unknown: not loaded yet, or the last read failed.
@@ -129,7 +127,7 @@ export class PopulationService {
             if (state.latestRequestId !== expectedRequestId) {
                 return;
             }
-            void PopulationService.refresh(scene, state.playerId, state.mapId);
+            void PopulationService.refresh(scene, state.mapId);
         });
     }
 }

@@ -30,7 +30,7 @@ export class HUDLayer {
     this.layer = this.scene.add.layer();
     this.mainMenuService = new MainMenuService(this.scene, this);
     this.buildingsMenuService = new BuildingsMenuService(this.scene, this);
-    this.productionMenuService = new ProductionMenuService(this.scene, this, this.player);
+    this.productionMenuService = new ProductionMenuService(this.scene, this);
     this.storageMenuService = new StorageMenuService(this.scene, this);
     this.mainMenuService.createMenu();
     this.createPlayerInfo();

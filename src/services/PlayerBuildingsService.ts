@@ -1,7 +1,6 @@
 import Phaser from "phaser";
 import {CONFIG} from "../configuration";
 import {IsometricService} from "./IsometricService";
-import {Player} from "../models/Player";
 import {HALF_H, HALF_W} from "../constants/constants";
 import {GameMap} from "../models/GameMap";
 import {WorldLayer} from "../layers/WorldLayer";
@@ -47,7 +46,6 @@ export class PlayerBuildingsService {
 
     constructor(
         private scene: Phaser.Scene,
-        private player: Player,
         private worldLayer: WorldLayer,
         private worldCamera: Camera
     ) {
@@ -170,7 +168,7 @@ export class PlayerBuildingsService {
             // a housing building provided.
             const mapId = this.map?.id;
             if (mapId) {
-                await PopulationService.refresh(this.scene, this.player.id, mapId);
+                await PopulationService.refresh(this.scene, mapId);
             }
         } else {
             console.error(`Failed to remove building ${playerBuildingId} from backend.`);
@@ -246,7 +244,6 @@ export class PlayerBuildingsService {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    player_id: this.player.id,
                     map_id: mapId,
                     building_id: this.currentBuildingId,
                     x: x,
@@ -382,7 +379,7 @@ export class PlayerBuildingsService {
 
         if (createdPlayerBuildingId !== null) {
             this.scene.registry.set('playerInventories',
-                await ItemService.getPlayerInventories(this.player.id, mapId));
+                await ItemService.getPlayerInventories(mapId));
             // Build the new player building record
             const newPlayerBuilding: PlayerBuilding = {
                 id: createdPlayerBuildingId,
@@ -427,7 +424,7 @@ export class PlayerBuildingsService {
 
             // A new building uses population, or adds it when it is housing. This comes
             // after rendering so the building shows up without waiting for the request.
-            await PopulationService.refresh(this.scene, this.player.id, mapId);
+            await PopulationService.refresh(this.scene, mapId);
         }
 
         // Exit placement mode

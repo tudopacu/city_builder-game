@@ -24,9 +24,11 @@ export class BuildingService {
         }
     }
 
-    static async getPlayerBuildings(playerId: number, mapId: number): Promise<PlayerBuilding[]> {
+    // Player-scoped requests never send a player ID: the backend acts on the
+    // logged-in player from the auth cookie.
+    static async getPlayerBuildings(mapId: number): Promise<PlayerBuilding[]> {
         try {
-            const response = await fetch(`${CONFIG.backendUrl}/game/get_player_buildings/${playerId}/${mapId}`, {
+            const response = await fetch(`${CONFIG.backendUrl}/game/get_player_buildings/${mapId}`, {
                 method: 'GET',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
@@ -67,13 +69,12 @@ export class BuildingService {
     }
 
     static async startProduction(
-        playerId: number,
         playerBuildingId: number,
         buildingProductionId: number,
     ): Promise<BuildingCurrentProduction | null> {
         try {
             const response = await fetch(
-                `${CONFIG.backendUrl}/game/start_production/${playerId}/${playerBuildingId}/${buildingProductionId}`,
+                `${CONFIG.backendUrl}/game/start_production/${playerBuildingId}/${buildingProductionId}`,
                 {
                     method: 'POST',
                     credentials: 'include',
@@ -94,13 +95,12 @@ export class BuildingService {
     }
 
     static async collectProduction(
-        playerId: number,
         playerBuildingId: number,
         buildingProductionId: number,
     ): Promise<boolean> {
         try {
             const response = await fetch(
-                `${CONFIG.backendUrl}/game/collect_production/${playerId}/${playerBuildingId}/${buildingProductionId}`,
+                `${CONFIG.backendUrl}/game/collect_production/${playerBuildingId}/${buildingProductionId}`,
                 {
                     method: 'PUT',
                     credentials: 'include',

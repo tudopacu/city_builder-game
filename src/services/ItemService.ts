@@ -25,9 +25,9 @@ export class ItemService {
         }
     }
 
-    static async getPlayerInventories(playerId: number, mapId: number): Promise<PlayerInventory[]> {
+    static async getPlayerInventories(mapId: number): Promise<PlayerInventory[]> {
         try {
-            const response = await fetch(`${CONFIG.backendUrl}/game/get_player_inventories/${playerId}/${mapId}`, {
+            const response = await fetch(`${CONFIG.backendUrl}/game/get_player_inventories/${mapId}`, {
                 method: 'GET',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
